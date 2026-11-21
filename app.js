@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('tactics-canvas');
     const ctx = canvas.getContext('2d');
 
-    // UI要素
+    // UI要素（パネル・ツールバー）
     const btnRecord = document.getElementById('btn-record');
     const recLabel = document.getElementById('rec-label');
     const btnReset = document.getElementById('btn-reset');
@@ -22,7 +22,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDownloadVideo = document.getElementById('btn-download-video');
     const btnCloseVideo = document.getElementById('btn-close-video');
 
-    // コマ表記モーダル要素
+    // UI要素（キーフレーム）
+    const kfTimeline = document.getElementById('kf-timeline');
+    const kfCountLabel = document.getElementById('kf-count');
+    const btnKfAdd = document.getElementById('btn-kf-add');
+    const btnKfUpdate = document.getElementById('btn-kf-update');
+    const btnKfDelete = document.getElementById('btn-kf-delete');
+    const btnKfClear = document.getElementById('btn-kf-clear');
+    const btnKfPlay = document.getElementById('btn-kf-play');
+    const btnKfRecord = document.getElementById('btn-kf-record');
+    const kfSpeedSelect = document.getElementById('kf-speed-select');
+    const kfLoopCheck = document.getElementById('kf-loop-check');
+
+    // UI要素（コマ表記モーダル）
     const labelModal = document.getElementById('label-modal');
     const btnOpenLabelModal = document.getElementById('btn-open-label-modal');
     const btnCloseLabelModal = document.getElementById('btn-close-label-modal');
@@ -35,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // アプリ状態管理
     // ==========================================
+    const APP_NAME = 'Tactical-Board';
     let courtMode = 'half';     // 'half' | 'full'
     let dfPreset = '6-0';       // '6-0' | '5-1' | '3-2-1' | '4-2'
     let labelMode = 'number';   // 'number' | 'position' | 'custom'
@@ -52,6 +65,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragOffsetX = 0;
     let dragOffsetY = 0;
 
+    // キーフレーム状態
+    let keyframes = [];         // [{ positions: {id:{x,y}}, ball:{x,y}, drawings:[...] }]
+    let selectedKfIndex = -1;
+    let isPlayingKf = false;
+    let kfAnimFrame = null;
+    let playingSegmentIndex = -1;
+    let stopRecordAfterPlayback = false;
+    let kfHoldTimer = null;
+
     // 録画状態
     let mediaRecorder = null;
     let recordedChunks = [];
@@ -64,7 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // コマ表記定義（番号 / ポジション / カスタム）
     // ==========================================
-    const LABEL_STORAGE_KEY = 'zeroStepTacticsCustomLabels';
+    const LABEL_STORAGE_KEY = 'tacticalBoardCustomLabels';
+    const LEGACY_LABEL_KEY = 'zeroStepTacticsCustomLabels';
 
     const PLAYER_META = {
         'off-1': { number: '1', position: 'LW', editTag: '攻撃1 (LW)' },
@@ -86,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadCustomLabels() {
         try {
-            const raw = localStorage.getItem(LABEL_STORAGE_KEY);
+            const raw = localStorage.getItem(LABEL_STORAGE_KEY) || localStorage.getItem(LEGACY_LABEL_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) {}
         return {};
@@ -107,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
     // DF陣形プリセット座標（半面 20m×20m 基準）
-    // 全面時は自動で右ゴール側（40m×20m）へ縮尺変換
     // ==========================================
     const DF_FORMATIONS_HALF = {
         '6-0': {
@@ -121,34 +143,31 @@ document.addEventListener('DOMContentLoaded', () => {
         '5-1': {
             'def-1': { x: 0.16, y: 0.21 },
             'def-2': { x: 0.31, y: 0.33 },
-            'def-3': { x: 0.50, y: 0.52 }, // トップ
-            'def-4': { x: 0.50, y: 0.35 }, // センター6m
+            'def-3': { x: 0.50, y: 0.52 },
+            'def-4': { x: 0.50, y: 0.35 },
             'def-5': { x: 0.69, y: 0.33 },
             'def-6': { x: 0.84, y: 0.21 }
         },
         '3-2-1': {
-            'def-1': { x: 0.17, y: 0.22 }, // 後列左
-            'def-2': { x: 0.29, y: 0.43 }, // 中列左
-            'def-3': { x: 0.50, y: 0.54 }, // トップ
-            'def-4': { x: 0.50, y: 0.34 }, // 後列中央
-            'def-5': { x: 0.71, y: 0.43 }, // 中列右
-            'def-6': { x: 0.83, y: 0.22 }  // 後列右
+            'def-1': { x: 0.17, y: 0.22 },
+            'def-2': { x: 0.29, y: 0.43 },
+            'def-3': { x: 0.50, y: 0.54 },
+            'def-4': { x: 0.50, y: 0.34 },
+            'def-5': { x: 0.71, y: 0.43 },
+            'def-6': { x: 0.83, y: 0.22 }
         },
         '4-2': {
-            'def-1': { x: 0.16, y: 0.21 }, // 後列左
-            'def-2': { x: 0.27, y: 0.48 }, // 前列左
-            'def-3': { x: 0.40, y: 0.34 }, // 後列中左
-            'def-4': { x: 0.60, y: 0.34 }, // 後列中右
-            'def-5': { x: 0.73, y: 0.48 }, // 前列右
-            'def-6': { x: 0.84, y: 0.21 }  // 後列右
+            'def-1': { x: 0.16, y: 0.21 },
+            'def-2': { x: 0.27, y: 0.48 },
+            'def-3': { x: 0.40, y: 0.34 },
+            'def-4': { x: 0.60, y: 0.34 },
+            'def-5': { x: 0.73, y: 0.48 },
+            'def-6': { x: 0.84, y: 0.21 }
         }
     };
 
     function convertHalfToFullRight(pt) {
-        return {
-            x: 1.0 - pt.y * 0.5,
-            y: pt.x
-        };
+        return { x: 1.0 - pt.y * 0.5, y: pt.x };
     }
 
     function applyDfPresetToPlayers(players, presetKey, mode) {
@@ -276,19 +295,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = playName ? '#f8fafc' : '#475569';
-        ctx.fillText(playName || 'Zero-Step Tactics', L.courtX, 34);
+        ctx.fillText(playName || APP_NAME, L.courtX, 34);
 
         ctx.font = '600 14px -apple-system, BlinkMacSystemFont, sans-serif';
         ctx.textAlign = 'right';
         ctx.fillStyle = '#64748b';
-        const modeText = `${courtMode === 'half' ? '半面' : '全面'}・${offCount}対${defCount} (${dfPreset})`;
-        ctx.fillText(modeText, L.courtX + L.courtW, 34);
+        let rightLabel = `${courtMode === 'half' ? '半面' : '全面'}・${offCount}対${defCount} (${dfPreset})`;
+        if (isPlayingKf && playingSegmentIndex >= 0) {
+            rightLabel = `SCENE ${playingSegmentIndex + 1} / ${keyframes.length}  |  ${rightLabel}`;
+        } else if (selectedKfIndex >= 0 && keyframes.length > 0) {
+            rightLabel = `SCENE ${selectedKfIndex + 1} / ${keyframes.length}  |  ${rightLabel}`;
+        }
+        ctx.fillText(rightLabel, L.courtX + L.courtW, 34);
         ctx.restore();
 
         // 3. ハンドボールコート描画
         drawCourt(L);
 
-        // 4. ユーザーが引いた線・矢印を描画
+        // 4. 補助線・矢印を描画
         drawAllAnnotations(L);
 
         // 5. ボール保持者の判定
@@ -335,7 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const leftPost = cx - 1.5 * s;
             const rightPost = cx + 1.5 * s;
 
-            // 6mゴールエリア
             ctx.beginPath();
             ctx.arc(leftPost, courtY, 6 * s, Math.PI, Math.PI / 2, true);
             ctx.lineTo(rightPost, courtY + 6 * s);
@@ -347,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.strokeStyle = '#34d399';
             ctx.stroke();
 
-            // 9mフリースローライン
             ctx.beginPath();
             ctx.setLineDash([10, 8]);
             ctx.arc(leftPost, courtY, 9 * s, Math.PI, Math.PI / 2, true);
@@ -358,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.stroke();
             ctx.setLineDash([]);
 
-            // 4m GKライン
             ctx.beginPath();
             ctx.moveTo(cx - 0.35 * s, courtY + 4 * s);
             ctx.lineTo(cx + 0.35 * s, courtY + 4 * s);
@@ -366,7 +387,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
             ctx.stroke();
 
-            // 7mスローライン
             ctx.beginPath();
             ctx.moveTo(cx - 0.6 * s, courtY + 7 * s);
             ctx.lineTo(cx + 0.6 * s, courtY + 7 * s);
@@ -380,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const botPost = cy + 1.5 * s;
             const rightX = courtX + courtW;
 
-            // センターライン
             ctx.beginPath();
             ctx.moveTo(courtX + courtW / 2, courtY);
             ctx.lineTo(courtX + courtW / 2, courtY + courtH);
@@ -388,7 +407,6 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.strokeStyle = 'rgba(52, 211, 153, 0.65)';
             ctx.stroke();
 
-            // 交代ライン
             ctx.beginPath();
             ctx.moveTo(courtX + courtW / 2 - 4.5 * s, courtY + courtH - 8);
             ctx.lineTo(courtX + courtW / 2 - 4.5 * s, courtY + courtH);
@@ -401,7 +419,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gx = isLeft ? courtX : rightX;
                 const dir = isLeft ? 1 : -1;
 
-                // 6mエリア
                 ctx.beginPath();
                 if (isLeft) {
                     ctx.arc(gx, topPost, 6 * s, -Math.PI / 2, 0, false);
@@ -419,7 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.strokeStyle = '#34d399';
                 ctx.stroke();
 
-                // 9mライン
                 ctx.beginPath();
                 ctx.setLineDash([8, 6]);
                 if (isLeft) {
@@ -436,7 +452,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // 4mライン
                 ctx.beginPath();
                 ctx.moveTo(gx + dir * 4 * s, cy - 0.35 * s);
                 ctx.lineTo(gx + dir * 4 * s, cy + 0.35 * s);
@@ -444,7 +459,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
                 ctx.stroke();
 
-                // 7mライン
                 ctx.beginPath();
                 ctx.moveTo(gx + dir * 7 * s, cy - 0.6 * s);
                 ctx.lineTo(gx + dir * 7 * s, cy + 0.6 * s);
@@ -455,7 +469,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         ctx.restore();
 
-        // 外枠ライン
         ctx.save();
         ctx.strokeStyle = '#6ee7b7';
         ctx.lineWidth = 3;
@@ -464,7 +477,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeRect(courtX, courtY, courtW, courtH);
         ctx.restore();
 
-        // ゴール枠
         ctx.save();
         ctx.fillStyle = '#ef4444';
         if (courtMode === 'half') {
@@ -521,7 +533,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = border;
         ctx.stroke();
 
-        // 表記文字（文字幅に合わせて自動で収まるようにサイズ調整）
         const text = getPlayerLabel(p);
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#ffffff';
@@ -609,6 +620,248 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
+    // キーフレーム機能（スナップショット・補間再生・自動録画）
+    // ==========================================
+    function captureSnapshot() {
+        const positions = {};
+        state.players.forEach(p => {
+            positions[p.id] = { x: p.x, y: p.y };
+        });
+        return {
+            positions,
+            ball: { x: state.ball.x, y: state.ball.y },
+            drawings: JSON.parse(JSON.stringify(drawings))
+        };
+    }
+
+    function applySnapshot(snapshot) {
+        if (!snapshot) return;
+        state.players.forEach(p => {
+            if (snapshot.positions[p.id]) {
+                p.x = snapshot.positions[p.id].x;
+                p.y = snapshot.positions[p.id].y;
+            }
+        });
+        state.ball.x = snapshot.ball.x;
+        state.ball.y = snapshot.ball.y;
+        drawings = JSON.parse(JSON.stringify(snapshot.drawings || []));
+        render();
+    }
+
+    function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function renderKeyframeUI() {
+        kfCountLabel.textContent = `${keyframes.length}シーン`;
+        kfTimeline.innerHTML = '';
+
+        if (keyframes.length === 0) {
+            const msg = document.createElement('span');
+            msg.className = 'kf-empty-msg';
+            msg.textContent = '配置を決めて「＋ シーン追加」を押すと動きを作れます';
+            kfTimeline.appendChild(msg);
+        } else {
+            keyframes.forEach((_, idx) => {
+                if (idx > 0) {
+                    const sep = document.createElement('span');
+                    sep.className = 'kf-arrow-sep';
+                    sep.textContent = '▸';
+                    kfTimeline.appendChild(sep);
+                }
+                const chip = document.createElement('button');
+                chip.className = 'kf-chip';
+                chip.textContent = `S${idx + 1}`;
+                if (isPlayingKf && playingSegmentIndex === idx) {
+                    chip.classList.add('playing');
+                } else if (!isPlayingKf && selectedKfIndex === idx) {
+                    chip.classList.add('active');
+                }
+                chip.addEventListener('click', () => {
+                    if (isPlayingKf) stopKeyframePlayback();
+                    selectedKfIndex = idx;
+                    applySnapshot(keyframes[idx]);
+                    renderKeyframeUI();
+                });
+                kfTimeline.appendChild(chip);
+            });
+        }
+
+        const hasSelection = selectedKfIndex >= 0 && selectedKfIndex < keyframes.length;
+        const canPlay = keyframes.length >= 2;
+
+        btnKfPlay.disabled = !canPlay || (isRecording && !stopRecordAfterPlayback);
+        btnKfPlay.textContent = isPlayingKf ? '⏹ 停止' : '▶ 再生';
+        btnKfPlay.classList.toggle('playing', isPlayingKf);
+
+        btnKfRecord.disabled = !canPlay || isPlayingKf || isRecording;
+        btnKfAdd.disabled = isPlayingKf;
+        btnKfUpdate.disabled = !hasSelection || isPlayingKf;
+        btnKfDelete.disabled = !hasSelection || isPlayingKf;
+        btnKfClear.disabled = keyframes.length === 0 || isPlayingKf;
+    }
+
+    function startKeyframePlayback(recordMode = false) {
+        if (keyframes.length < 2) return;
+        stopKeyframePlayback();
+
+        isPlayingKf = true;
+        stopRecordAfterPlayback = recordMode;
+        const stepDuration = parseInt(kfSpeedSelect.value, 10) || 1200;
+        let segIdx = 0;
+        let segStartTime = null;
+
+        // 開始時は必ずシーン1をセット
+        playingSegmentIndex = 0;
+        applySnapshot(keyframes[0]);
+        renderKeyframeUI();
+
+        function animate(timestamp) {
+            if (!isPlayingKf) return;
+            if (segStartTime === null) segStartTime = timestamp;
+
+            const elapsed = timestamp - segStartTime;
+            const rawT = Math.min(1, elapsed / stepDuration);
+            const easedT = easeInOutCubic(rawT);
+
+            const fromFrame = keyframes[segIdx];
+            const toFrame = keyframes[segIdx + 1];
+
+            // 選手座標の線形補間
+            state.players.forEach(p => {
+                const fPos = fromFrame.positions[p.id];
+                const tPos = toFrame.positions[p.id];
+                if (fPos && tPos) {
+                    p.x = fPos.x + (tPos.x - fPos.x) * easedT;
+                    p.y = fPos.y + (tPos.y - fPos.y) * easedT;
+                }
+            });
+
+            // ボール座標の補間
+            state.ball.x = fromFrame.ball.x + (toFrame.ball.x - fromFrame.ball.x) * easedT;
+            state.ball.y = fromFrame.ball.y + (toFrame.ball.y - fromFrame.ball.y) * easedT;
+
+            // 出発シーンの補助線を表示
+            drawings = fromFrame.drawings || [];
+            render();
+
+            if (rawT < 1) {
+                kfAnimFrame = requestAnimationFrame(animate);
+            } else {
+                segIdx++;
+                if (segIdx < keyframes.length - 1) {
+                    playingSegmentIndex = segIdx;
+                    segStartTime = null;
+                    renderKeyframeUI();
+                    kfAnimFrame = requestAnimationFrame(animate);
+                } else {
+                    // 最終シーン到達
+                    playingSegmentIndex = keyframes.length - 1;
+                    applySnapshot(keyframes[keyframes.length - 1]);
+                    renderKeyframeUI();
+
+                    if (!recordMode && kfLoopCheck.checked) {
+                        kfHoldTimer = setTimeout(() => {
+                            if (!isPlayingKf) return;
+                            segIdx = 0;
+                            segStartTime = null;
+                            playingSegmentIndex = 0;
+                            applySnapshot(keyframes[0]);
+                            renderKeyframeUI();
+                            kfAnimFrame = requestAnimationFrame(animate);
+                        }, 550);
+                    } else if (recordMode) {
+                        // 動画の最後に少し余韻を残してから自動停止
+                        kfHoldTimer = setTimeout(() => {
+                            stopKeyframePlayback();
+                            if (isRecording) stopRecording();
+                        }, 700);
+                    } else {
+                        selectedKfIndex = keyframes.length - 1;
+                        stopKeyframePlayback();
+                    }
+                }
+            }
+        }
+
+        // 最初のシーンを0.35秒見せてから動き始める
+        kfHoldTimer = setTimeout(() => {
+            if (!isPlayingKf) return;
+            kfAnimFrame = requestAnimationFrame(animate);
+        }, 350);
+    }
+
+    function stopKeyframePlayback() {
+        isPlayingKf = false;
+        playingSegmentIndex = -1;
+        stopRecordAfterPlayback = false;
+        if (kfAnimFrame) {
+            cancelAnimationFrame(kfAnimFrame);
+            kfAnimFrame = null;
+        }
+        if (kfHoldTimer) {
+            clearTimeout(kfHoldTimer);
+            kfHoldTimer = null;
+        }
+        renderKeyframeUI();
+        render();
+    }
+
+    btnKfAdd.addEventListener('click', () => {
+        if (isPlayingKf) return;
+        keyframes.push(captureSnapshot());
+        selectedKfIndex = keyframes.length - 1;
+        renderKeyframeUI();
+        render();
+    });
+
+    btnKfUpdate.addEventListener('click', () => {
+        if (isPlayingKf || selectedKfIndex < 0) return;
+        keyframes[selectedKfIndex] = captureSnapshot();
+        renderKeyframeUI();
+        render();
+    });
+
+    btnKfDelete.addEventListener('click', () => {
+        if (isPlayingKf || selectedKfIndex < 0) return;
+        keyframes.splice(selectedKfIndex, 1);
+        if (keyframes.length === 0) {
+            selectedKfIndex = -1;
+        } else {
+            selectedKfIndex = Math.min(selectedKfIndex, keyframes.length - 1);
+            applySnapshot(keyframes[selectedKfIndex]);
+        }
+        renderKeyframeUI();
+        render();
+    });
+
+    btnKfClear.addEventListener('click', () => {
+        if (isPlayingKf || keyframes.length === 0) return;
+        if (!confirm('登録したキーフレームをすべて消去しますか？')) return;
+        keyframes = [];
+        selectedKfIndex = -1;
+        renderKeyframeUI();
+        render();
+    });
+
+    btnKfPlay.addEventListener('click', () => {
+        if (isPlayingKf) {
+            stopKeyframePlayback();
+            if (isRecording && stopRecordAfterPlayback) stopRecording();
+        } else {
+            startKeyframePlayback(false);
+        }
+    });
+
+    btnKfRecord.addEventListener('click', () => {
+        if (keyframes.length < 2 || isRecording || isPlayingKf) return;
+        const started = startRecording(true);
+        if (started) {
+            startKeyframePlayback(true);
+        }
+    });
+
+    // ==========================================
     // ポインター操作（コマ移動 & ペン／矢印描画）
     // ==========================================
     function getCanvasPos(e) {
@@ -620,6 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     canvas.addEventListener('pointerdown', (e) => {
+        if (isPlayingKf) return; // 再生中は誤操作防止
         const L = getLayout();
         const pos = getCanvasPos(e);
         canvas.setPointerCapture(e.pointerId);
@@ -700,7 +954,7 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('pointercancel', finishPointer);
 
     // ==========================================
-    // 動画録画機能
+    // 動画録画機能（手動録画 & キーフレーム自動録画共用）
     // ==========================================
     function getSupportedMimeType() {
         const candidates = [
@@ -714,10 +968,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return candidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
     }
 
-    function startRecording() {
+    function startRecording(isAutoKf = false) {
         if (!canvas.captureStream || typeof MediaRecorder === 'undefined') {
             alert('お使いのブラウザは動画録画機能に対応していません。Chrome・Edge・最新のSafariをお試しください。');
-            return;
+            return false;
         }
 
         const mimeType = getSupportedMimeType();
@@ -730,7 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 : new MediaRecorder(stream);
         } catch (err) {
             alert('録画の開始に失敗しました: ' + err.message);
-            return;
+            return false;
         }
 
         mediaRecorder.ondataavailable = (e) => {
@@ -745,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lastVideoUrl) URL.revokeObjectURL(lastVideoUrl);
             lastVideoUrl = URL.createObjectURL(blob);
 
-            const baseName = playNameInput.value.trim().replace(/[\\/:*?"<>|]/g, '_') || 'ZeroStep_Tactics';
+            const baseName = playNameInput.value.trim().replace(/[\\/:*?"<>|]/g, '_') || APP_NAME;
             recordedVideo.src = lastVideoUrl;
             btnDownloadVideo.href = lastVideoUrl;
             btnDownloadVideo.download = `${baseName}.${ext}`;
@@ -756,15 +1010,18 @@ document.addEventListener('DOMContentLoaded', () => {
         isRecording = true;
         recordStartTime = Date.now();
         btnRecord.classList.add('recording');
-        recLabel.textContent = '録画停止 (00:00)';
+        recLabel.textContent = isAutoKf ? 'アニメ録画中...' : '録画停止 (00:00)';
         courtModeBtns.forEach(b => b.disabled = true);
+        renderKeyframeUI();
 
-        recordTimerId = setInterval(() => {
-            const sec = Math.floor((Date.now() - recordStartTime) / 1000);
-            const mm = String(Math.floor(sec / 60)).padStart(2, '0');
-            const ss = String(sec % 60).padStart(2, '0');
-            recLabel.textContent = `録画停止 (${mm}:${ss})`;
-        }, 500);
+        if (!isAutoKf) {
+            recordTimerId = setInterval(() => {
+                const sec = Math.floor((Date.now() - recordStartTime) / 1000);
+                const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+                const ss = String(sec % 60).padStart(2, '0');
+                recLabel.textContent = `録画停止 (${mm}:${ss})`;
+            }, 500);
+        }
 
         function pumpFrames() {
             if (!isRecording) return;
@@ -772,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recordAnimFrame = requestAnimationFrame(pumpFrames);
         }
         pumpFrames();
+        return true;
     }
 
     function stopRecording() {
@@ -782,13 +1040,18 @@ document.addEventListener('DOMContentLoaded', () => {
         mediaRecorder.stop();
 
         btnRecord.classList.remove('recording');
-        recLabel.textContent = '動きを録画する';
+        recLabel.textContent = '手動で録画';
         courtModeBtns.forEach(b => b.disabled = false);
+        renderKeyframeUI();
     }
 
     btnRecord.addEventListener('click', () => {
-        if (isRecording) stopRecording();
-        else startRecording();
+        if (isRecording) {
+            if (isPlayingKf) stopKeyframePlayback();
+            stopRecording();
+        } else {
+            startRecording(false);
+        }
     });
 
     btnCloseVideo.addEventListener('click', () => {
@@ -875,6 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         customLabels = {};
         try {
             localStorage.removeItem(LABEL_STORAGE_KEY);
+            localStorage.removeItem(LEGACY_LABEL_KEY);
         } catch (e) {}
         buildLabelInputs();
         render();
@@ -888,38 +1152,42 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsSubtitle.textContent = `${modeLabel}・${offCount}対${defCount}・${dfPreset}`;
     }
 
-    // 配置リセット（現在選択中のDF陣形を保ったまま初期化）
     btnReset.addEventListener('click', () => {
+        if (isPlayingKf) stopKeyframePlayback();
         state = getDefaultState(courtMode, dfPreset);
         drawings = [];
         render();
     });
 
-    // 半面 / 全面 切り替え
     courtModeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if (isRecording) return;
+            if (isRecording || isPlayingKf) return;
             const nextMode = btn.dataset.mode;
             if (nextMode === courtMode) return;
+            if (keyframes.length > 0 && !confirm('半面／全面を切り替えると現在のキーフレームはリセットされます。よろしいですか？')) {
+                return;
+            }
             courtMode = nextMode;
             courtModeBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            keyframes = [];
+            selectedKfIndex = -1;
             state = getDefaultState(courtMode, dfPreset);
             drawings = [];
             setupCanvasSize();
             updateSubtitle();
+            renderKeyframeUI();
             render();
         });
     });
 
-    // DF陣形プリセット切り替え
     dfPresetBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (isPlayingKf) stopKeyframePlayback();
             dfPreset = btn.dataset.df;
             dfPresetBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            // プリセット選択時は相手チーム6人表示を自動でONにする
             defCount = 6;
             defCountBtns.forEach(b => b.classList.toggle('active', b.dataset.count === '6'));
             if (!showOpponent) {
@@ -934,14 +1202,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // コマ表記モード切替
     labelModeBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             setLabelMode(btn.dataset.labelMode);
         });
     });
 
-    // 攻撃人数
     offCountBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             offCountBtns.forEach(b => b.classList.remove('active'));
@@ -952,7 +1218,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 守備人数
     defCountBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             defCountBtns.forEach(b => b.classList.remove('active'));
@@ -963,7 +1228,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 相手チーム表示切替
     btnToggleOpp.addEventListener('click', () => {
         showOpponent = !showOpponent;
         btnToggleOpp.textContent = showOpponent ? '表示中' : '非表示';
@@ -971,10 +1235,8 @@ document.addEventListener('DOMContentLoaded', () => {
         render();
     });
 
-    // サインプレー名リアルタイム反映
     playNameInput.addEventListener('input', () => render());
 
-    // 描画ツール切り替え
     toolBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             toolBtns.forEach(b => b.classList.remove('active'));
@@ -985,6 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnUndoDraw.addEventListener('click', () => {
+        if (isPlayingKf) return;
         if (drawings.length > 0) {
             drawings.pop();
             render();
@@ -992,6 +1255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnClearDraw.addEventListener('click', () => {
+        if (isPlayingKf) return;
         drawings = [];
         render();
     });
@@ -999,5 +1263,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初回描画
     setupCanvasSize();
     updateSubtitle();
+    renderKeyframeUI();
     render();
 });
