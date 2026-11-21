@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical-Board (電子作戦盤)</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <title>Tactical-Board</title>
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
     <header class="app-header">
-        <h1>Zero-Step Tactics</h1>
+        <h1>Tactical-Board</h1>
     </header>
 
     <div class="app-container">
-        <!-- 左側：作戦盤キャンバス＆描画ツールバー -->
+        <!-- 左側：作戦盤キャンバス＆ツールバー＆キーフレーム -->
         <div class="board-section">
             <div class="canvas-wrapper">
                 <canvas id="tactics-canvas"></canvas>
@@ -28,19 +28,53 @@
                 <button class="tool-action-btn" id="btn-undo-draw">↩ 1つ戻す</button>
                 <button class="tool-action-btn danger" id="btn-clear-draw">🗑 線を全消去</button>
             </div>
+
+            <!-- キーフレーム・タイムラインバー -->
+            <div class="keyframe-bar">
+                <div class="kf-top-row">
+                    <div class="kf-title">
+                        <span>キーフレーム</span>
+                        <span class="kf-count" id="kf-count">0シーン</span>
+                    </div>
+                    <div class="kf-play-controls">
+                        <button class="kf-btn primary" id="btn-kf-play" disabled>▶ 再生</button>
+                        <button class="kf-btn record-anim" id="btn-kf-record" disabled>🎬 アニメ録画</button>
+                        <select id="kf-speed-select" class="kf-select" title="1シーン間の移動時間">
+                            <option value="1800">遅め (1.8秒)</option>
+                            <option value="1200" selected>標準 (1.2秒)</option>
+                            <option value="750">速め (0.75秒)</option>
+                        </select>
+                        <label class="kf-loop-label">
+                            <input type="checkbox" id="kf-loop-check"> ループ
+                        </label>
+                    </div>
+                </div>
+
+                <div class="kf-bottom-row">
+                    <div class="kf-timeline" id="kf-timeline">
+                        <span class="kf-empty-msg">配置を決めて「＋ シーン追加」を押すと動きを作れます</span>
+                    </div>
+                    <div class="kf-edit-controls">
+                        <button class="kf-btn add" id="btn-kf-add">＋ シーン追加</button>
+                        <button class="kf-btn" id="btn-kf-update" disabled>上書き</button>
+                        <button class="kf-btn danger" id="btn-kf-delete" disabled>削除</button>
+                        <button class="kf-btn danger" id="btn-kf-clear" disabled>全消去</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 右側：コントロールパネル -->
         <aside class="panel-container">
             <div class="panel-header">
-                <span>作戦盤</span>
-                <span class="panel-en">TACTICS</span>
+                <span>Tactical-Board</span>
+                <span class="panel-en">CONTROL</span>
             </div>
 
             <div class="action-buttons">
                 <button class="btn btn-record" id="btn-record">
                     <span class="rec-icon">●</span>
-                    <span id="rec-label">動きを録画する</span>
+                    <span id="rec-label">手動で録画</span>
                 </button>
                 <button class="btn btn-secondary" id="btn-reset">配置を戻す</button>
             </div>
@@ -52,7 +86,7 @@
                     <button id="btn-close-video" class="btn-mini">✕</button>
                 </div>
                 <video id="recorded-video" controls playsinline></video>
-                <a id="btn-download-video" class="btn btn-download" download="tactics.webm">↓ 動画を保存する</a>
+                <a id="btn-download-video" class="btn btn-download" download="Tactical-Board.webm">↓ 動画を保存する</a>
             </div>
 
             <!-- 設定パネル -->
@@ -161,6 +195,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=2"></script>
+    <script src="app.js?v=3"></script>
 </body>
 </html>
