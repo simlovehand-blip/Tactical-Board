@@ -1,0 +1,417 @@
+/* ==========================================
+   ベースレイアウト
+========================================== */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", Roboto, sans-serif;
+    background-color: #070f1e;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.app-header {
+    background: linear-gradient(90deg, #0b3b75, #0a4f96);
+    padding: 10px 20px;
+    border-bottom: 1px solid #1e5ca8;
+    text-align: center;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #ffffff;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1360px;
+    margin: 0 auto;
+    min-height: calc(100vh - 44px);
+}
+
+/* ==========================================
+   左側：作戦盤エリア
+========================================== */
+.board-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.canvas-wrapper {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #0b1426;
+    border: 1px solid #1e2d4a;
+    border-radius: 14px;
+    padding: 12px;
+    overflow: hidden;
+}
+
+#tactics-canvas {
+    max-width: 100%;
+    max-height: calc(100vh - 150px);
+    width: auto;
+    height: auto;
+    border-radius: 10px;
+    touch-action: none; /* タブレット操作時のスクロール防止 */
+    cursor: grab;
+    display: block;
+}
+
+#tactics-canvas.drawing-mode {
+    cursor: crosshair;
+}
+
+/* 描画ツールバー */
+.draw-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background-color: #111d33;
+    border: 1px solid #1f3050;
+    border-radius: 10px;
+    padding: 8px 12px;
+    width: 100%;
+}
+
+.tool-btn,
+.tool-action-btn {
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 7px;
+    border: 1px solid #2b3f66;
+    background-color: #182744;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: 0.15s;
+}
+
+.tool-btn.active {
+    background-color: #0284c7;
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.tool-action-btn:hover,
+.tool-btn:hover {
+    filter: brightness(1.15);
+}
+
+.tool-action-btn.danger {
+    color: #fca5a5;
+    border-color: #7f1d1d;
+    background-color: #2c1522;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 22px;
+    background-color: #2b3f66;
+    margin: 0 4px;
+}
+
+/* ==========================================
+   右側：コントロールパネル
+========================================== */
+.panel-container {
+    width: 310px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.panel-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.panel-en {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    flex: 1;
+    padding: 12px 10px;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: 0.15s;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-record {
+    background-color: #0b6bc2;
+}
+
+.btn-record.recording {
+    background-color: #dc2626;
+    animation: pulse-rec 1.2s infinite;
+}
+
+@keyframes pulse-rec {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.65); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+.rec-icon {
+    font-size: 11px;
+}
+
+.btn-secondary {
+    background-color: #1f2e47;
+    border: 1px solid #33486b;
+}
+
+/* 録画結果エリア */
+.video-result-box {
+    background-color: #111d33;
+    border: 1px solid #2563eb;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.video-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #93c5fd;
+}
+
+.btn-mini {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+#recorded-video {
+    width: 100%;
+    border-radius: 6px;
+    background: #000;
+}
+
+.btn-download {
+    background-color: #059669;
+    padding: 9px;
+    font-size: 13px;
+}
+
+/* 設定ボックス */
+.settings-box {
+    background-color: #111d33;
+    border: 1px solid #1f3050;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.settings-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #1f3050;
+}
+
+.subtitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+}
+
+.setting-group {
+    margin-bottom: 16px;
+}
+
+.setting-group label {
+    display: block;
+    font-size: 13px;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.help-text {
+    font-size: 11px;
+    font-weight: 400;
+    color: #64748b;
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 半面・全面トグル */
+.toggle-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid #2b3f66;
+    background-color: #182744;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.toggle-btn.active {
+    background-color: #16404a;
+    border-color: #34d399;
+    color: #d1fae5;
+}
+
+/* 人数ボタン */
+.counter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.counter-label {
+    font-size: 13px;
+    color: #94a3b8;
+    width: 38px;
+}
+
+.num-btns {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+}
+
+.num-btn {
+    flex: 1;
+    padding: 7px 0;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #2b3f66;
+    background-color: #182744;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.num-btn.active {
+    background-color: #12445c;
+    border-color: #38bdf8;
+    color: #e0f2fe;
+}
+
+.def-btns .num-btn.active {
+    background-color: #4c1d31;
+    border-color: #f43f5e;
+    color: #ffe4e6;
+}
+
+/* 相手チーム表示ボタン */
+.btn-toggle-opp {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid #475569;
+    background-color: #1e293b;
+    color: #94a3b8;
+}
+
+.btn-toggle-opp.active {
+    background-color: #4c1d31;
+    border-color: #f43f5e;
+    color: #fecdd3;
+}
+
+/* テキスト入力 */
+.input-text {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #2b3f66;
+    background-color: #0b1426;
+    color: #ffffff;
+    font-size: 14px;
+    outline: none;
+}
+
+.input-text:focus {
+    border-color: #38bdf8;
+}
+
+/* 縦画面・モバイル対応 */
+@media (max-width: 860px) {
+    .app-container {
+        flex-direction: column;
+        height: auto;
+    }
+    .panel-container {
+        width: 100%;
+    }
+    #tactics-canvas {
+        max-height: 65vh;
+    }
+}
