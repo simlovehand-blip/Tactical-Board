@@ -284,11 +284,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function render() {
         const L = getLayout();
 
-        // 1. 全体背景
         ctx.fillStyle = '#09111f';
         ctx.fillRect(0, 0, L.width, L.height);
 
-        // 2. サインプレー名タイトルバー
         const playName = playNameInput.value.trim();
         ctx.save();
         ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif';
@@ -309,13 +307,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText(rightLabel, L.courtX + L.courtW, 34);
         ctx.restore();
 
-        // 3. ハンドボールコート描画
         drawCourt(L);
-
-        // 4. 補助線・矢印を描画
         drawAllAnnotations(L);
 
-        // 5. ボール保持者の判定
         const bx = L.courtX + state.ball.x * L.courtW;
         const by = L.courtY + state.ball.y * L.courtH;
         let holder = null;
@@ -332,13 +326,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 6. 選手コマ描画
         state.players.forEach(p => {
             if (!isPlayerVisible(p)) return;
             drawPlayer(L, p, holder && holder.id === p.id);
         });
 
-        // 7. ボール描画
         drawBall(L, bx, by);
     }
 
@@ -620,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // キーフレーム機能（スナップショット・補間再生・自動録画）
+    // キーフレーム機能
     // ==========================================
     function captureSnapshot() {
         const positions = {};
@@ -711,7 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let segIdx = 0;
         let segStartTime = null;
 
-        // 開始時は必ずシーン1をセット
         playingSegmentIndex = 0;
         applySnapshot(keyframes[0]);
         renderKeyframeUI();
@@ -727,7 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const fromFrame = keyframes[segIdx];
             const toFrame = keyframes[segIdx + 1];
 
-            // 選手座標の線形補間
             state.players.forEach(p => {
                 const fPos = fromFrame.positions[p.id];
                 const tPos = toFrame.positions[p.id];
@@ -737,11 +727,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // ボール座標の補間
             state.ball.x = fromFrame.ball.x + (toFrame.ball.x - fromFrame.ball.x) * easedT;
             state.ball.y = fromFrame.ball.y + (toFrame.ball.y - fromFrame.ball.y) * easedT;
 
-            // 出発シーンの補助線を表示
             drawings = fromFrame.drawings || [];
             render();
 
@@ -755,7 +743,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderKeyframeUI();
                     kfAnimFrame = requestAnimationFrame(animate);
                 } else {
-                    // 最終シーン到達
                     playingSegmentIndex = keyframes.length - 1;
                     applySnapshot(keyframes[keyframes.length - 1]);
                     renderKeyframeUI();
@@ -771,7 +758,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             kfAnimFrame = requestAnimationFrame(animate);
                         }, 550);
                     } else if (recordMode) {
-                        // 動画の最後に少し余韻を残してから自動停止
                         kfHoldTimer = setTimeout(() => {
                             stopKeyframePlayback();
                             if (isRecording) stopRecording();
@@ -784,7 +770,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 最初のシーンを0.35秒見せてから動き始める
         kfHoldTimer = setTimeout(() => {
             if (!isPlayingKf) return;
             kfAnimFrame = requestAnimationFrame(animate);
@@ -862,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // ポインター操作（コマ移動 & ペン／矢印描画）
+    // ポインター操作
     // ==========================================
     function getCanvasPos(e) {
         const rect = canvas.getBoundingClientRect();
@@ -873,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     canvas.addEventListener('pointerdown', (e) => {
-        if (isPlayingKf) return; // 再生中は誤操作防止
+        if (isPlayingKf) return;
         const L = getLayout();
         const pos = getCanvasPos(e);
         canvas.setPointerCapture(e.pointerId);
@@ -954,7 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('pointercancel', finishPointer);
 
     // ==========================================
-    // 動画録画機能（手動録画 & キーフレーム自動録画共用）
+    // 動画録画機能
     // ==========================================
     function getSupportedMimeType() {
         const candidates = [
@@ -1259,6 +1244,17 @@ document.addEventListener('DOMContentLoaded', () => {
         drawings = [];
         render();
     });
+
+    // ==========================================
+    // オフライン対応（Service Worker登録）
+    // ==========================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').then((reg) => {
+                console.log('SW registered:', reg.scope);
+            }).catch(() => {});
+        });
+    }
 
     // 初回描画
     setupCanvasSize();
