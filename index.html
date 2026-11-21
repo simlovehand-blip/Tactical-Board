@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tactical-Board (電子作戦盤)</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
     <header class="app-header">
@@ -59,7 +59,7 @@
             <div class="settings-box">
                 <div class="settings-title">
                     <span>設定</span>
-                    <span class="subtitle" id="settings-subtitle">半面・6対6</span>
+                    <span class="subtitle" id="settings-subtitle">半面・6対6・6-0</span>
                 </div>
 
                 <!-- 半面 / 全面 -->
@@ -67,6 +67,30 @@
                     <div class="toggle-btns" id="court-mode-btns">
                         <button class="toggle-btn active" data-mode="half">半面</button>
                         <button class="toggle-btn" data-mode="full">全面</button>
+                    </div>
+                </div>
+
+                <!-- DF陣形プリセット -->
+                <div class="setting-group">
+                    <label>DF陣形プリセット</label>
+                    <div class="num-btns def-btns" id="df-preset-btns">
+                        <button class="num-btn active" data-df="6-0">6-0</button>
+                        <button class="num-btn" data-df="5-1">5-1</button>
+                        <button class="num-btn" data-df="3-2-1">3-2-1</button>
+                        <button class="num-btn" data-df="4-2">4-2</button>
+                    </div>
+                </div>
+
+                <!-- コマ表記モード -->
+                <div class="setting-group">
+                    <div class="flex-between" style="margin-bottom: 8px;">
+                        <label style="margin: 0;">コマ表記</label>
+                        <button class="btn-edit-labels" id="btn-open-label-modal">✏️ 表記を編集</button>
+                    </div>
+                    <div class="num-btns" id="label-mode-btns">
+                        <button class="num-btn active" data-label-mode="number">番号</button>
+                        <button class="num-btn" data-label-mode="position">ポジション</button>
+                        <button class="num-btn" data-label-mode="custom">カスタム</button>
                     </div>
                 </div>
 
@@ -107,6 +131,36 @@
         </aside>
     </div>
 
-    <script src="app.js"></script>
+    <!-- コマ表記カスタマイズ用モーダル -->
+    <div id="label-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>コマ表記のカスタマイズ</h3>
+                <button id="btn-close-label-modal" class="btn-mini">✕</button>
+            </div>
+            <p class="modal-desc">各コマに表示する文字（背番号・選手名など、1〜3文字推奨）を入力してください。保存すると自動で「カスタム」表示に切り替わります。</p>
+
+            <div class="label-edit-columns">
+                <div class="label-edit-col">
+                    <div class="label-col-title off">攻撃チーム（青）</div>
+                    <div id="label-inputs-off" class="label-input-list"></div>
+                </div>
+                <div class="label-edit-col">
+                    <div class="label-col-title def">守備チーム（赤・GK）</div>
+                    <div id="label-inputs-def" class="label-input-list"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="btn-reset-labels" class="tool-action-btn danger">初期値に戻す</button>
+                <div class="modal-footer-right">
+                    <button id="btn-cancel-labels" class="tool-action-btn">キャンセル</button>
+                    <button id="btn-save-labels" class="btn btn-save-modal">保存して適用</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=2"></script>
 </body>
 </html>
