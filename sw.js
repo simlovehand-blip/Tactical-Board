@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tactical-board-v3';
+const CACHE_NAME = 'tactical-board-v4';
 const ASSETS = [
     './',
     './index.html',
-    './style.css?v=3',
-    './app.js?v=3',
-    './manifest.json',
-    './icon.png'
+    './style.css?v=4',
+    './app.js?v=4',
+    './manifest.json?v=4',
+    './icon.png?v=4'
 ];
 
 self.addEventListener('install', (event) => {
