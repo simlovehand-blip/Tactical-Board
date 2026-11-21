@@ -1,13 +1,13 @@
 {
     "name": "Tactical-Board",
-    "short_name": "Tactical",
+    "short_name": "Tactical-Board",
     "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#070f1e",
     "theme_color": "#0b3b75",
     "icons": [
         {
-            "src": "icon.png",
+            "src": "icon.png?v=4",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"
