@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zero-Step Tactics (電子作戦盤)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Zero-Step Tactics</h1>
+    </header>
+
+    <div class="app-container">
+        <!-- 左側：作戦盤キャンバス＆描画ツールバー -->
+        <div class="board-section">
+            <div class="canvas-wrapper">
+                <canvas id="tactics-canvas"></canvas>
+            </div>
+
+            <!-- 描画・操作ツールバー -->
+            <div class="draw-toolbar">
+                <button class="tool-btn active" data-tool="move">👆 コマ移動</button>
+                <button class="tool-btn" data-tool="arrow">↗ 動き矢印</button>
+                <button class="tool-btn" data-tool="pass">⇢ パス点線</button>
+                <button class="tool-btn" data-tool="pen">✏️ ペン</button>
+                <span class="toolbar-divider"></span>
+                <button class="tool-action-btn" id="btn-undo-draw">↩ 1つ戻す</button>
+                <button class="tool-action-btn danger" id="btn-clear-draw">🗑 線を全消去</button>
+            </div>
+        </div>
+
+        <!-- 右側：コントロールパネル -->
+        <aside class="panel-container">
+            <div class="panel-header">
+                <span>作戦盤</span>
+                <span class="panel-en">TACTICS</span>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-record" id="btn-record">
+                    <span class="rec-icon">●</span>
+                    <span id="rec-label">動きを録画する</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-reset">配置を戻す</button>
+            </div>
+
+            <!-- 録画完了後のプレビュー＆保存エリア -->
+            <div id="video-result-box" class="video-result-box" style="display: none;">
+                <div class="video-result-header">
+                    <span>録画完了</span>
+                    <button id="btn-close-video" class="btn-mini">✕</button>
+                </div>
+                <video id="recorded-video" controls playsinline></video>
+                <a id="btn-download-video" class="btn btn-download" download="tactics.webm">↓ 動画を保存する</a>
+            </div>
+
+            <!-- 設定パネル -->
+            <div class="settings-box">
+                <div class="settings-title">
+                    <span>設定</span>
+                    <span class="subtitle" id="settings-subtitle">半面・6対6</span>
+                </div>
+
+                <!-- 半面 / 全面 -->
+                <div class="setting-group">
+                    <div class="toggle-btns" id="court-mode-btns">
+                        <button class="toggle-btn active" data-mode="half">半面</button>
+                        <button class="toggle-btn" data-mode="full">全面</button>
+                    </div>
+                </div>
+
+                <!-- 人数設定 -->
+                <div class="setting-group">
+                    <label>人数 <span class="help-text">(退場で5人・7人で攻める など)</span></label>
+                    <div class="counter-row">
+                        <span class="counter-label">攻撃</span>
+                        <div class="num-btns" id="off-count-btns">
+                            <button class="num-btn" data-count="4">4人</button>
+                            <button class="num-btn" data-count="5">5人</button>
+                            <button class="num-btn active" data-count="6">6人</button>
+                            <button class="num-btn" data-count="7">7人</button>
+                        </div>
+                    </div>
+                    <div class="counter-row">
+                        <span class="counter-label">守備</span>
+                        <div class="num-btns def-btns" id="def-count-btns">
+                            <button class="num-btn" data-count="4">4人</button>
+                            <button class="num-btn" data-count="5">5人</button>
+                            <button class="num-btn active" data-count="6">6人</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 相手チーム表示切替 -->
+                <div class="setting-group flex-between">
+                    <label style="margin: 0;">相手チーム</label>
+                    <button class="btn-toggle-opp active" id="btn-toggle-opp">表示中</button>
+                </div>
+
+                <!-- サインプレー名 -->
+                <div class="setting-group" style="margin-bottom: 0;">
+                    <label for="play-name-input">サインプレー名 <span class="help-text">(動画に表示されます)</span></label>
+                    <input type="text" id="play-name-input" class="input-text" placeholder="例：クロス／ずらし">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
