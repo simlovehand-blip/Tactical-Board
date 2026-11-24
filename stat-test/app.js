@@ -37,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedQuickZone = null;  // '7m' | 'fastbreak' | 'empty'
 
     // コート上タップ情報（半面20m×20m基準の相対座標 x:0..1, y:0..1）
-    // y=0 がゴールライン、y=0.30 が6mライン、y=0.45 が9mライン、y=0.575 が11.5m表示下端
     let shotPoint = null;          // { x, y, zone, lane, depth, angleDeg, distM }
     let historyLogs = [];
     let scoreOwn = 0;
@@ -161,11 +160,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 6m〜9m実測コート図（パターンA・LW/RW狭め調整版）
+    // 6m〜9m実測コート図（LW/RWコーナー配置・LB/CB/RB広め版）
     // 表示範囲：横 0〜20m（x: 0..1）、縦 0〜11.5m（y: 0..0.575）
     // ==========================================
     const MAX_VIEW_METERS_Y = 11.5;
     const COURT_WIDTH_M = 20.0;
+
+    // コーナー（LW/RW）の境界定数
+    const WING_MAX_Y = 6.5;       // ゴールラインから6.5mまでをコーナー領域とする
+    const WING_TOP_X = 3.5;       // y=0m地点でのサイドからの幅（3.5m）
+    const WING_BOT_X = 2.0;       // y=6.5m地点でのサイドからの幅（2.0m）
+    const CB_HALF_WIDTH = 3.0;    // CBの左右幅（中心から±3.0m＝計6.0m幅）
 
     function resizeCourtCanvas() {
         const wrap = shotCanvas.parentElement;
@@ -187,7 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const availW = Math.max(180, rect.width - padX * 2);
         const availH = Math.max(110, rect.height - padY * 2);
 
-        // 横20m × 縦11.5m の実測比率を維持して枠内に中央配置
         const pxPerM = Math.min(availW / COURT_WIDTH_M, availH / MAX_VIEW_METERS_Y);
         const drawW = COURT_WIDTH_M * pxPerM;
         const drawH = MAX_VIEW_METERS_Y * pxPerM;
@@ -203,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 半面20m×20mの相対座標 (x:0..1, y:0..1) から canvasピクセルへ変換
     function normToCanvas(m, nx, ny) {
         return {
             cx: m.x0 + nx * m.w,
@@ -211,32 +214,34 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // canvasピクセルから半面20m×20mの相対座標 (x:0..1, y:0..1) へ逆変換
     function canvasToNorm(m, cx, cy) {
         const nx = Math.max(0, Math.min(1, (cx - m.x0) / m.w));
         const yMeters = Math.max(0.2, Math.min(MAX_VIEW_METERS_Y, (cy - m.y0) / m.pxPerM));
         return { nx, ny: yMeters / 20.0 };
     }
 
-    // パターンA（狭め）：サイドラインから約3m幅を LW / RW とする
+    // エリア判定：LW/RWは左右の隅（コーナー）、それ以外はLB/CB/RBを広く確保
     function classifyShotArea(nx, ny) {
         const xMeters = nx * COURT_WIDTH_M; // 0..20m
         const yMeters = ny * 20.0;           // 0..11.5m
-        const dxCenter = xMeters - 10.0;     // ゴール中心からの左右オフセット(-10..+10m)
+        const dxCenter = xMeters - 10.0;     // -10..+10m
         const distM = Math.hypot(dxCenter, yMeters);
 
         // ゴール中心(10, 0)を原点とし、左サイド=0°、正面=90°、右サイド=180°
         const radFromLeft = Math.atan2(yMeters, xMeters);
         const angleDeg = Math.round((radFromLeft * 180) / Math.PI);
 
+        // 深さに応じたコーナー境界幅
+        const wingLimitX = WING_TOP_X - (Math.min(yMeters, WING_MAX_Y) / WING_MAX_Y) * (WING_TOP_X - WING_BOT_X);
+
         let lane = 'CB';
-        if (dxCenter < -7.0 || (yMeters < 3.6 && dxCenter < -5.8)) {
+        if (yMeters <= WING_MAX_Y && xMeters <= wingLimitX) {
             lane = 'LW';
-        } else if (dxCenter > 7.0 || (yMeters < 3.6 && dxCenter > 5.8)) {
+        } else if (yMeters <= WING_MAX_Y && xMeters >= (COURT_WIDTH_M - wingLimitX)) {
             lane = 'RW';
-        } else if (dxCenter < -2.3) {
+        } else if (dxCenter < -CB_HALF_WIDTH) {
             lane = 'LB';
-        } else if (dxCenter > 2.3) {
+        } else if (dxCenter > CB_HALF_WIDTH) {
             lane = 'RB';
         } else {
             lane = 'CB';
@@ -281,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const m = getCourtMetrics();
         ctx.clearRect(0, 0, m.viewW, m.viewH);
 
-        // コート背景
         ctx.save();
         ctx.fillStyle = '#0c182c';
         ctx.fillRect(m.x0, m.y0, m.w, m.h);
@@ -290,17 +294,30 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.rect(m.x0, m.y0, m.w, m.h);
         ctx.clip();
 
-        // パターンA：LW / RW サイドゾーンをうっすら色分け（片側15%幅）
-        const lwW = m.w * 0.15;
-        const rwX = m.x0 + m.w * 0.85;
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
-        ctx.fillRect(m.x0, m.y0, lwW, m.h);
-        ctx.fillRect(rwX, m.y0, m.w * 0.15, m.h);
-
         const pxPerM = m.pxPerM;
         const goalCenter = normToCanvas(m, 0.5, 0);
         const leftPost = normToCanvas(m, 0.5 - 1.5 / 20, 0);
         const rightPost = normToCanvas(m, 0.5 + 1.5 / 20, 0);
+
+        // LW / RW コーナーゾーンをうっすら色分け（左右の上隅）
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+        // LW コーナー
+        ctx.beginPath();
+        ctx.moveTo(m.x0, m.y0);
+        ctx.lineTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
+        ctx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        ctx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
+        ctx.closePath();
+        ctx.fill();
+
+        // RW コーナー
+        ctx.beginPath();
+        ctx.moveTo(m.x0 + m.w, m.y0);
+        ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
+        ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        ctx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
+        ctx.closePath();
+        ctx.fill();
 
         // 6mゴールエリア（塗りつぶし＋実線）
         ctx.beginPath();
@@ -335,45 +352,48 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
         ctx.stroke();
 
-        // パターンA（狭め）境界ガイド線（LW/LB、LB/CB、CB/RB、RB/RW）
+        // エリア境界ガイド線
         ctx.save();
         ctx.setLineDash([4, 5]);
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
         ctx.lineWidth = 1.2;
 
-        const lwBoundTop = normToCanvas(m, (10 - 5.8) / 20, 3.6 / 20);
-        const lwBoundBot = normToCanvas(m, (10 - 7.0) / 20, MAX_VIEW_METERS_Y / 20);
+        // LW コーナー境界線
         ctx.beginPath();
-        ctx.moveTo(lwBoundTop.cx, lwBoundTop.cy);
-        ctx.lineTo(lwBoundBot.cx, lwBoundBot.cy);
+        ctx.moveTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
+        ctx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        ctx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
         ctx.stroke();
 
-        const rwBoundTop = normToCanvas(m, (10 + 5.8) / 20, 3.6 / 20);
-        const rwBoundBot = normToCanvas(m, (10 + 7.0) / 20, MAX_VIEW_METERS_Y / 20);
+        // RW コーナー境界線
         ctx.beginPath();
-        ctx.moveTo(rwBoundTop.cx, rwBoundTop.cy);
-        ctx.lineTo(rwBoundBot.cx, rwBoundBot.cy);
+        ctx.moveTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
+        ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        ctx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
         ctx.stroke();
 
-        const lbcbBot = normToCanvas(m, (10 - 2.3) / 20, MAX_VIEW_METERS_Y / 20);
-        const cbrbBot = normToCanvas(m, (10 + 2.3) / 20, MAX_VIEW_METERS_Y / 20);
+        // LB / CB ＆ CB / RB 境界線（中心から±3.0m）
+        const lbcbX = m.x0 + (10 - CB_HALF_WIDTH) * pxPerM;
+        const cbrbX = m.x0 + (10 + CB_HALF_WIDTH) * pxPerM;
         ctx.beginPath();
-        ctx.moveTo(leftPost.cx, leftPost.cy + 6 * pxPerM);
-        ctx.lineTo(lbcbBot.cx, lbcbBot.cy);
-        ctx.moveTo(rightPost.cx, rightPost.cy + 6 * pxPerM);
-        ctx.lineTo(cbrbBot.cx, cbrbBot.cy);
+        ctx.moveTo(lbcbX, m.y0 + 6 * pxPerM);
+        ctx.lineTo(lbcbX, m.y0 + m.h);
+        ctx.moveTo(cbrbX, m.y0 + 6 * pxPerM);
+        ctx.lineTo(cbrbX, m.y0 + m.h);
         ctx.stroke();
         ctx.restore();
 
         // レーンラベル描画
-        ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.78)';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('LW', m.x0 + m.w * 0.06, m.y0 + 7.2 * pxPerM);
-        ctx.fillText('LB', m.x0 + m.w * 0.27, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('CB', m.x0 + m.w * 0.50, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('RB', m.x0 + m.w * 0.73, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('RW', m.x0 + m.w * 0.94, m.y0 + 7.2 * pxPerM);
+        // LW / RW は左右の上隅に配置
+        ctx.fillText('LW', m.x0 + 1.3 * pxPerM, m.y0 + 3.2 * pxPerM);
+        ctx.fillText('RW', m.x0 + (COURT_WIDTH_M - 1.3) * pxPerM, m.y0 + 3.2 * pxPerM);
+        // LB / CB / RB は広く配置
+        ctx.fillText('LB', m.x0 + 3.8 * pxPerM, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('CB', m.x0 + 10.0 * pxPerM, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('RB', m.x0 + 16.2 * pxPerM, m.y0 + 9.8 * pxPerM);
 
         // 距離ラベル（6m / 9m）
         ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
