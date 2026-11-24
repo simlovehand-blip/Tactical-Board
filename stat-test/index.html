@@ -3,25 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tactical-Board STAT (Step 1)</title>
-    <link rel="stylesheet" href="style.css?v=4">
+    <title>Tactical-Board STAT (Step 2)</title>
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
-    <!-- 上部ヘッダー（タブ枠・タイマー・スコア） -->
+    <!-- 上部ヘッダー（タブ・タイマー・前後半・スコア） -->
     <header class="top-header">
         <div class="brand-area">
             <span class="brand-title">Tactical-Board</span>
-            <span class="brand-badge">STAT v1</span>
+            <span class="brand-badge">STAT v2</span>
         </div>
 
         <nav class="mode-tabs" aria-label="画面切替">
             <button class="tab-btn active" data-tab="input">試合入力</button>
-            <button class="tab-btn" data-tab="map" disabled title="ステップ2・3で実装予定">分析マップ</button>
+            <button class="tab-btn" data-tab="map" disabled title="ステップ3で実装予定">分析マップ</button>
             <button class="tab-btn" data-tab="tactics" disabled title="ステップ3で実装予定">作戦盤</button>
-            <button class="tab-btn" data-tab="roster" disabled title="名簿・CSV出力">名簿・出力</button>
+            <button class="tab-btn" data-tab="roster">名簿・出力</button>
         </nav>
 
         <div class="hud-area">
+            <button id="btn-half-toggle" class="half-badge-btn" title="前半/後半の切替">前半</button>
             <div class="timer-box">
                 <span id="timer-display" class="timer-text">00:00</span>
                 <button id="btn-timer-toggle" class="hud-mini-btn" title="タイマー開始/一時停止">▶</button>
@@ -37,8 +38,8 @@
         </div>
     </header>
 
-    <!-- メイン3分割ワークスペース -->
-    <main class="workspace">
+    <!-- タブ1：試合入力ワークスペース -->
+    <main id="view-input" class="workspace">
         <!-- 左パネル：チーム切替・GK・背番号 -->
         <section class="panel player-panel">
             <div class="team-switch">
@@ -48,20 +49,18 @@
 
             <div class="player-sub-row">
                 <button id="btn-select-gk" class="gk-btn">GK</button>
-                <span id="selected-player-badge" class="selected-badge">選手: #1</span>
+                <span id="selected-player-badge" class="selected-badge">自: #1</span>
             </div>
 
             <div id="jersey-grid" class="jersey-grid" aria-label="背番号選択"></div>
         </section>
 
-        <!-- 中央パネル：ゴール9分割＆パターンA 6m〜9m実測コート図 -->
+        <!-- 中央パネル：ゴール9分割＆6m〜9m実測コート図 -->
         <section class="panel center-panel">
             <!-- 上段：ゴール9分割＆枠外・ブロック -->
             <div class="goal-section">
                 <div class="goal-outer">
-                    <div class="goal-post-left"></div>
                     <div class="goal-crossbar"></div>
-                    <div class="goal-post-right"></div>
                     <div id="goal-grid" class="goal-grid" aria-label="ゴール9分割"></div>
                 </div>
                 <div class="goal-sub-actions">
@@ -71,7 +70,7 @@
                 </div>
             </div>
 
-            <!-- 下段：6m〜9m実測コート図（パターンA：LW・RWサイド重視） -->
+            <!-- 下段：6m〜9m実測コート図（LW/RWコーナー配置・LB/CB/RB広め） -->
             <div class="court-section">
                 <div class="court-telemetry">
                     <span id="telemetry-zone" class="telemetry-pill">エリア: 未選択</span>
@@ -104,7 +103,7 @@
 
             <div class="log-box">
                 <div class="log-header">
-                    <span>最近のプレイ</span>
+                    <span>最近のプレイ (<span id="log-count">0</span>件)</span>
                     <button id="btn-undo" class="undo-btn">一つ戻る</button>
                 </div>
                 <ul id="play-log-list" class="play-log-list">
@@ -114,6 +113,79 @@
         </section>
     </main>
 
-    <script src="app.js?v=4"></script>
+    <!-- タブ4：名簿・CSV出力・データ管理 -->
+    <section id="view-roster" class="roster-workspace" style="display: none;">
+        <div class="roster-grid-layout">
+            <!-- 左カード：試合情報＆CSV出力＆リセット -->
+            <div class="panel roster-side-card">
+                <div class="card-title-row">
+                    <h2>試合情報・データ出力</h2>
+                    <span class="autosave-badge" id="autosave-status">自動保存ON</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="match-title-input">大会・試合名</label>
+                    <input type="text" id="match-title-input" class="text-input" placeholder="例：練習試合 / 県大会1回戦">
+                </div>
+
+                <div class="form-group">
+                    <label for="match-opponent-input">対戦相手チーム名</label>
+                    <input type="text" id="match-opponent-input" class="text-input" placeholder="例：〇〇高校">
+                </div>
+
+                <div class="summary-stats-box">
+                    <div class="stat-mini">
+                        <span class="stat-mini-label">総記録数</span>
+                        <span class="stat-mini-val" id="summary-total-logs">0 件</span>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-mini-label">現在スコア</span>
+                        <span class="stat-mini-val" id="summary-score">0 - 0</span>
+                    </div>
+                </div>
+
+                <button id="btn-export-csv" class="btn-primary-full">
+                    ↓ Excel用 CSVをダウンロード
+                </button>
+                <p class="helper-note">※UTF-8 (BOM付) で出力されるため、Excelでそのまま文字化けせず開けます。</p>
+
+                <hr class="card-divider">
+
+                <div class="danger-zone">
+                    <div class="danger-title">試合データのリセット</div>
+                    <button id="btn-reset-match" class="btn-danger-outline">
+                        🗑 記録・スコアをリセット（名簿は維持）
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右カード：選手名簿登録 -->
+            <div class="panel roster-main-card">
+                <div class="card-title-row">
+                    <h2>選手名簿登録（1〜18番）</h2>
+                    <div class="roster-team-tabs">
+                        <button class="roster-team-btn active own" data-roster-team="own">自チーム名簿</button>
+                        <button class="roster-team-btn opp" data-roster-team="opp">相手チーム名簿</button>
+                    </div>
+                </div>
+                <p class="helper-note" style="margin-top: 0;">登録した選手名は「試合入力」の背番号ボタンに自動反映され、Tactical-Boardとも共有されます。</p>
+
+                <div class="roster-table-wrap">
+                    <table class="roster-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 56px;">番号</th>
+                                <th>選手名（表示名・フルネーム）</th>
+                                <th style="width: 110px;">ポジション</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roster-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="app.js?v=5"></script>
 </body>
 </html>
