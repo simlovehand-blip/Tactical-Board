@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // コート上タップ情報（半面20m×20m基準の相対座標 x:0..1, y:0..1）
     // y=0 がゴールライン、y=0.30 が6mライン、y=0.45 が9mライン、y=0.575 が11.5m表示下端
-    let shotPoint = null;          // { x, y, zone, angleDeg, distM }
+    let shotPoint = null;          // { x, y, zone, lane, depth, angleDeg, distM }
     let historyLogs = [];
     let scoreOwn = 0;
     let scoreOpp = 0;
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let timerInterval = null;
     let isTimerRunning = false;
 
-    // ゴール9分割ラベル（画面表示は「ゴール正面から見た左右」基準）
+    // ゴール9分割ラベル（ゴール正面から見た左右基準）
     const GOAL_ZONES = [
         { id: 'UL', label: '左上' }, { id: 'UC', label: '中上' }, { id: 'UR', label: '右上' },
         { id: 'ML', label: '左中' }, { id: 'MC', label: '中央' }, { id: 'MR', label: '右中' },
@@ -108,7 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ゴール9分割＆特殊コース初期化
     // ==========================================
     function buildGoalGrid() {
-        // ゴール枠内を赤白枠線＋3x3グリッドで構成
         const outer = document.querySelector('.goal-outer');
         const oldBody = outer.querySelector('.goal-frame-body');
         if (oldBody) oldBody.remove();
@@ -173,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const rect = wrap.getBoundingClientRect();
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const w = Math.max(240, Math.floor(rect.width));
-        const h = Math.max(160, Math.floor(rect.height));
+        const h = Math.max(140, Math.floor(rect.height));
         shotCanvas.width = Math.floor(w * dpr);
         shotCanvas.height = Math.floor(h * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -183,18 +182,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function getCourtMetrics() {
         const wrap = shotCanvas.parentElement;
         const rect = wrap.getBoundingClientRect();
-        const padX = 12;
-        const padTop = 10;
-        const padBottom = 10;
-        const drawW = Math.max(180, rect.width - padX * 2);
-        const drawH = Math.max(120, rect.height - padTop - padBottom);
+        const padX = 10;
+        const padY = 8;
+        const availW = Math.max(180, rect.width - padX * 2);
+        const availH = Math.max(110, rect.height - padY * 2);
+
+        // 横20m × 縦11.5m の実測比率を維持して枠内に中央配置
+        const pxPerM = Math.min(availW / COURT_WIDTH_M, availH / MAX_VIEW_METERS_Y);
+        const drawW = COURT_WIDTH_M * pxPerM;
+        const drawH = MAX_VIEW_METERS_Y * pxPerM;
+
         return {
             viewW: rect.width,
             viewH: rect.height,
-            x0: padX,
-            y0: padTop,
+            x0: (rect.width - drawW) / 2,
+            y0: (rect.height - drawH) / 2,
             w: drawW,
-            h: drawH
+            h: drawH,
+            pxPerM
         };
     }
 
@@ -202,15 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function normToCanvas(m, nx, ny) {
         return {
             cx: m.x0 + nx * m.w,
-            cy: m.y0 + (ny / (MAX_VIEW_METERS_Y / 20.0)) * m.h
+            cy: m.y0 + (ny * 20.0) * m.pxPerM
         };
     }
 
     // canvasピクセルから半面20m×20mの相対座標 (x:0..1, y:0..1) へ逆変換
     function canvasToNorm(m, cx, cy) {
         const nx = Math.max(0, Math.min(1, (cx - m.x0) / m.w));
-        const ny = Math.max(0.01, Math.min(MAX_VIEW_METERS_Y / 20.0, ((cy - m.y0) / m.h) * (MAX_VIEW_METERS_Y / 20.0)));
-        return { nx, ny };
+        const yMeters = Math.max(0.2, Math.min(MAX_VIEW_METERS_Y, (cy - m.y0) / m.pxPerM));
+        return { nx, ny: yMeters / 20.0 };
     }
 
     // パターンA（LW・RWサイド重視）：
@@ -225,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const radFromLeft = Math.atan2(yMeters, xMeters);
         const angleDeg = Math.round((radFromLeft * 180) / Math.PI);
 
-        // パターンA：サイドライン際〜外側ゾーン（|dx| > 5.8m または y < 3.5m かつ |dx| > 4.2m）を LW / RW として広く確保
+        // パターンA：サイドライン際〜外側ゾーンを LW / RW として広く確保
         let lane = 'CB';
         if (dxCenter < -5.8 || (yMeters < 3.6 && dxCenter < -4.2)) {
             lane = 'LW';
@@ -287,15 +292,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.rect(m.x0, m.y0, m.w, m.h);
         ctx.clip();
 
-        // パターンA：LW / RW サイドゾーンをうっすら色分けして視認性アップ
+        // パターンA：LW / RW サイドゾーンをうっすら色分け
         const lwW = m.w * 0.21;
         const rwX = m.x0 + m.w * 0.79;
         ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
         ctx.fillRect(m.x0, m.y0, lwW, m.h);
         ctx.fillRect(rwX, m.y0, m.w * 0.21, m.h);
 
-        // 1m = pxPerM
-        const pxPerM = m.w / COURT_WIDTH_M;
+        const pxPerM = m.pxPerM;
         const goalCenter = normToCanvas(m, 0.5, 0);
         const leftPost = normToCanvas(m, 0.5 - 1.5 / 20, 0);
         const rightPost = normToCanvas(m, 0.5 + 1.5 / 20, 0);
@@ -339,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
         ctx.lineWidth = 1.2;
 
-        // LW / LB 境界（ゴール中心から左5.8m付近）
         const lwBoundTop = normToCanvas(m, (10 - 4.2) / 20, 3.6 / 20);
         const lwBoundBot = normToCanvas(m, (10 - 5.8) / 20, MAX_VIEW_METERS_Y / 20);
         ctx.beginPath();
@@ -347,7 +350,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.lineTo(lwBoundBot.cx, lwBoundBot.cy);
         ctx.stroke();
 
-        // RW / RB 境界（ゴール中心から右5.8m付近）
         const rwBoundTop = normToCanvas(m, (10 + 4.2) / 20, 3.6 / 20);
         const rwBoundBot = normToCanvas(m, (10 + 5.8) / 20, MAX_VIEW_METERS_Y / 20);
         ctx.beginPath();
@@ -355,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.lineTo(rwBoundBot.cx, rwBoundBot.cy);
         ctx.stroke();
 
-        // LB / CB ＆ CB / RB 境界
         const lbcbBot = normToCanvas(m, (10 - 2.1) / 20, MAX_VIEW_METERS_Y / 20);
         const cbrbBot = normToCanvas(m, (10 + 2.1) / 20, MAX_VIEW_METERS_Y / 20);
         ctx.beginPath();
@@ -366,22 +367,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
         ctx.restore();
 
-        // レーンラベル描画（LWを左サイド際、RWを右サイド際に配置）
+        // レーンラベル描画
         ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('LW', m.x0 + m.w * 0.08, m.y0 + m.h * 0.62);
-        ctx.fillText('LB', m.x0 + m.w * 0.29, m.y0 + m.h * 0.84);
-        ctx.fillText('CB', m.x0 + m.w * 0.50, m.y0 + m.h * 0.84);
-        ctx.fillText('RB', m.x0 + m.w * 0.71, m.y0 + m.h * 0.84);
-        ctx.fillText('RW', m.x0 + m.w * 0.92, m.y0 + m.h * 0.62);
+        ctx.fillText('LW', m.x0 + m.w * 0.08, m.y0 + 7.2 * pxPerM);
+        ctx.fillText('LB', m.x0 + m.w * 0.29, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('CB', m.x0 + m.w * 0.50, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('RB', m.x0 + m.w * 0.71, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('RW', m.x0 + m.w * 0.92, m.y0 + 7.2 * pxPerM);
 
         // 距離ラベル（6m / 9m）
         ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText('6m', m.x0 + m.w - 6, m.y0 + (6 / MAX_VIEW_METERS_Y) * m.h - 4);
-        ctx.fillText('9m', m.x0 + m.w - 6, m.y0 + (9 / MAX_VIEW_METERS_Y) * m.h - 4);
+        ctx.fillText('6m', m.x0 + m.w - 6, m.y0 + 6 * pxPerM - 4);
+        ctx.fillText('9m', m.x0 + m.w - 6, m.y0 + 9 * pxPerM - 4);
 
         // 過去の記録マーカーを薄くプロット
         historyLogs.forEach(item => {
@@ -549,7 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         playLogList.innerHTML = '';
-        // 新しい記録を上に表示
         [...historyLogs].reverse().forEach(item => {
             const li = document.createElement('li');
             li.className = `log-item ${item.team === 'opp' ? 'opp' : ''}`;
@@ -624,7 +624,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderHistoryUI();
             renderCourt();
 
-            // 次の入力に備えてシュート打点・コース選択だけをリセット（選手とチームは維持）
             selectedGoalCourse = null;
             selectedQuickZone = null;
             shotPoint = null;
