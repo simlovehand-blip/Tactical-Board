@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 6m〜9m実測コート図（パターンA：LW・RWサイド重視）
+    // 6m〜9m実測コート図（パターンA・LW/RW狭め調整版）
     // 表示範囲：横 0〜20m（x: 0..1）、縦 0〜11.5m（y: 0..0.575）
     // ==========================================
     const MAX_VIEW_METERS_Y = 11.5;
@@ -218,8 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { nx, ny: yMeters / 20.0 };
     }
 
-    // パターンA（LW・RWサイド重視）：
-    // ゴール中央(x=0.5, y=0)からの角度・メートル距離・サイドレーンでエリアを判定
+    // パターンA（狭め）：サイドラインから約3m幅を LW / RW とする
     function classifyShotArea(nx, ny) {
         const xMeters = nx * COURT_WIDTH_M; // 0..20m
         const yMeters = ny * 20.0;           // 0..11.5m
@@ -230,15 +229,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const radFromLeft = Math.atan2(yMeters, xMeters);
         const angleDeg = Math.round((radFromLeft * 180) / Math.PI);
 
-        // パターンA：サイドライン際〜外側ゾーンを LW / RW として広く確保
         let lane = 'CB';
-        if (dxCenter < -5.8 || (yMeters < 3.6 && dxCenter < -4.2)) {
+        if (dxCenter < -7.0 || (yMeters < 3.6 && dxCenter < -5.8)) {
             lane = 'LW';
-        } else if (dxCenter > 5.8 || (yMeters < 3.6 && dxCenter > 4.2)) {
+        } else if (dxCenter > 7.0 || (yMeters < 3.6 && dxCenter > 5.8)) {
             lane = 'RW';
-        } else if (dxCenter < -2.1) {
+        } else if (dxCenter < -2.3) {
             lane = 'LB';
-        } else if (dxCenter > 2.1) {
+        } else if (dxCenter > 2.3) {
             lane = 'RB';
         } else {
             lane = 'CB';
@@ -292,12 +290,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.rect(m.x0, m.y0, m.w, m.h);
         ctx.clip();
 
-        // パターンA：LW / RW サイドゾーンをうっすら色分け
-        const lwW = m.w * 0.21;
-        const rwX = m.x0 + m.w * 0.79;
+        // パターンA：LW / RW サイドゾーンをうっすら色分け（片側15%幅）
+        const lwW = m.w * 0.15;
+        const rwX = m.x0 + m.w * 0.85;
         ctx.fillStyle = 'rgba(56, 189, 248, 0.05)';
         ctx.fillRect(m.x0, m.y0, lwW, m.h);
-        ctx.fillRect(rwX, m.y0, m.w * 0.21, m.h);
+        ctx.fillRect(rwX, m.y0, m.w * 0.15, m.h);
 
         const pxPerM = m.pxPerM;
         const goalCenter = normToCanvas(m, 0.5, 0);
@@ -337,28 +335,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
         ctx.stroke();
 
-        // パターンA 境界ガイド線（LW/LB、LB/CB、CB/RB、RB/RW）
+        // パターンA（狭め）境界ガイド線（LW/LB、LB/CB、CB/RB、RB/RW）
         ctx.save();
         ctx.setLineDash([4, 5]);
         ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
         ctx.lineWidth = 1.2;
 
-        const lwBoundTop = normToCanvas(m, (10 - 4.2) / 20, 3.6 / 20);
-        const lwBoundBot = normToCanvas(m, (10 - 5.8) / 20, MAX_VIEW_METERS_Y / 20);
+        const lwBoundTop = normToCanvas(m, (10 - 5.8) / 20, 3.6 / 20);
+        const lwBoundBot = normToCanvas(m, (10 - 7.0) / 20, MAX_VIEW_METERS_Y / 20);
         ctx.beginPath();
         ctx.moveTo(lwBoundTop.cx, lwBoundTop.cy);
         ctx.lineTo(lwBoundBot.cx, lwBoundBot.cy);
         ctx.stroke();
 
-        const rwBoundTop = normToCanvas(m, (10 + 4.2) / 20, 3.6 / 20);
-        const rwBoundBot = normToCanvas(m, (10 + 5.8) / 20, MAX_VIEW_METERS_Y / 20);
+        const rwBoundTop = normToCanvas(m, (10 + 5.8) / 20, 3.6 / 20);
+        const rwBoundBot = normToCanvas(m, (10 + 7.0) / 20, MAX_VIEW_METERS_Y / 20);
         ctx.beginPath();
         ctx.moveTo(rwBoundTop.cx, rwBoundTop.cy);
         ctx.lineTo(rwBoundBot.cx, rwBoundBot.cy);
         ctx.stroke();
 
-        const lbcbBot = normToCanvas(m, (10 - 2.1) / 20, MAX_VIEW_METERS_Y / 20);
-        const cbrbBot = normToCanvas(m, (10 + 2.1) / 20, MAX_VIEW_METERS_Y / 20);
+        const lbcbBot = normToCanvas(m, (10 - 2.3) / 20, MAX_VIEW_METERS_Y / 20);
+        const cbrbBot = normToCanvas(m, (10 + 2.3) / 20, MAX_VIEW_METERS_Y / 20);
         ctx.beginPath();
         ctx.moveTo(leftPost.cx, leftPost.cy + 6 * pxPerM);
         ctx.lineTo(lbcbBot.cx, lbcbBot.cy);
@@ -371,11 +369,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('LW', m.x0 + m.w * 0.08, m.y0 + 7.2 * pxPerM);
-        ctx.fillText('LB', m.x0 + m.w * 0.29, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('LW', m.x0 + m.w * 0.06, m.y0 + 7.2 * pxPerM);
+        ctx.fillText('LB', m.x0 + m.w * 0.27, m.y0 + 9.8 * pxPerM);
         ctx.fillText('CB', m.x0 + m.w * 0.50, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('RB', m.x0 + m.w * 0.71, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('RW', m.x0 + m.w * 0.92, m.y0 + 7.2 * pxPerM);
+        ctx.fillText('RB', m.x0 + m.w * 0.73, m.y0 + 9.8 * pxPerM);
+        ctx.fillText('RW', m.x0 + m.w * 0.94, m.y0 + 7.2 * pxPerM);
 
         // 距離ラベル（6m / 9m）
         ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
