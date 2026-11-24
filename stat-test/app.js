@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initStatApp() {
     // ==========================================
     // 共通ストレージ定数（ステップ3で作戦盤と共有）
     // ==========================================
@@ -359,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dxCenter = xMeters - 10.0;     // ゴール中心からの左右オフセット(-10..+10m)
         const distM = Math.hypot(dxCenter, yMeters);
 
-        // 【修正済み】ゴール中心(10, 0)を原点とし、左サイド=0°、正面=90°、右サイド=180°
+        // ゴール中心(10, 0)を原点とし、左サイド=0°、正面=90°、右サイド=180°
         const radFromGoalCenter = Math.atan2(yMeters, -dxCenter);
         const angleDeg = Math.round((radFromGoalCenter * 180) / Math.PI);
         const acuteAngleDeg = Math.min(angleDeg, 180 - angleDeg);
@@ -1014,4 +1014,10 @@ document.addEventListener('DOMContentLoaded', () => {
             resizeCourtCanvas();
         }
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStatApp);
+} else {
+    initStatApp();
+}
