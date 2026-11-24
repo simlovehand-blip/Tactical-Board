@@ -189,8 +189,12 @@
         </div>
     </section>
 
-    <script>
+   <script>
         (function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+            }
+
             const v = Date.now();
             const cssLink = document.getElementById('dynamic-css');
             if (cssLink) cssLink.href = 'style.css?v=' + v;
