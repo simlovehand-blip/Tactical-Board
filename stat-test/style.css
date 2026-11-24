@@ -1,0 +1,703 @@
+/* ==========================================
+   ベース＆テーマ設定
+========================================== */
+:root {
+    --bg-app: #070f1e;
+    --bg-panel: #0e192d;
+    --bg-card: #15233d;
+    --border-subtle: #233659;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent-own: #2563eb;
+    --accent-own-glow: #3b82f6;
+    --accent-opp: #e11d48;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ==========================================
+   上部ヘッダー
+========================================== */
+.top-header {
+    height: 48px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #092b59, #0c3f82);
+    border-bottom: 1px solid #1e4f91;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.brand-area {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.brand-title {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: #ffffff;
+}
+
+.brand-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #bae6fd;
+}
+
+.mode-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(7, 15, 30, 0.45);
+    padding: 3px;
+    border-radius: 8px;
+}
+
+.tab-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #cbd5e1;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tab-btn.active {
+    background: #0284c7;
+    color: #ffffff;
+}
+
+.tab-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.hud-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.timer-box {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #070f1e;
+    border: 1px solid #233659;
+    border-radius: 7px;
+    padding: 3px 6px;
+}
+
+.timer-text {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fbbf24;
+    min-width: 42px;
+    text-align: center;
+}
+
+.hud-mini-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #2c436e;
+    border-radius: 5px;
+    background: #15233d;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+.hud-mini-btn.running {
+    background: #b45309;
+    border-color: #fbbf24;
+    color: #ffffff;
+}
+
+.score-box {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: #070f1e;
+    border: 1px solid #2c436e;
+    border-radius: 7px;
+    padding: 3px 9px;
+}
+
+.score-team {
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.score-team.own { color: #60a5fa; }
+.score-team.opp { color: #fb7185; }
+
+.score-num {
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+    min-width: 16px;
+    text-align: center;
+}
+
+.score-sep {
+    color: #64748b;
+    font-weight: 700;
+}
+
+/* ==========================================
+   メイン3列ワークスペース（タブレット横画面）
+========================================== */
+.workspace {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr) 245px;
+    gap: 10px;
+    padding: 10px;
+}
+
+.panel {
+    min-height: 0;
+    background-color: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ==========================================
+   左パネル：チーム切替＆背番号
+========================================== */
+.team-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.team-btn {
+    padding: 8px 4px;
+    border-radius: 8px;
+    border: 1px solid #2c436e;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.team-btn.active.own {
+    background: rgba(37, 99, 235, 0.28);
+    border-color: #60a5fa;
+    color: #eff6ff;
+}
+
+.team-btn.active.opp {
+    background: rgba(225, 29, 72, 0.28);
+    border-color: #fb7185;
+    color: #fff1f2;
+}
+
+.player-sub-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.gk-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid #10b981;
+    background: rgba(16, 185, 129, 0.16);
+    color: #a7f3d0;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.gk-btn.active {
+    background: #059669;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+}
+
+.selected-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: #93c5fd;
+    background: #09111f;
+    border: 1px solid #1f3356;
+    padding: 5px 8px;
+    border-radius: 7px;
+    white-space: nowrap;
+}
+
+.jersey-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    align-content: stretch;
+}
+
+.jersey-btn {
+    border-radius: 8px;
+    border: 1px solid #273d63;
+    background: var(--bg-card);
+    color: #e2e8f0;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    transition: 0.1s;
+}
+
+.jersey-btn.active.own {
+    background: #1d4ed8;
+    border-color: #93c5fd;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.45);
+}
+
+.jersey-btn.active.opp {
+    background: #be123c;
+    border-color: #fda4af;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
+}
+
+/* ==========================================
+   中央パネル：ゴール9分割＆6m〜9mコート図
+========================================== */
+.center-panel {
+    gap: 8px;
+    padding: 10px 12px;
+}
+
+.goal-section {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.goal-outer {
+    position: relative;
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 10px;
+    padding: 10px 14px 8px 14px;
+}
+
+/* ゴール枠の視覚表現（赤白ストライプ風フレーム） */
+.goal-crossbar {
+    height: 7px;
+    border-radius: 4px 4px 0 0;
+    background: repeating-linear-gradient(
+        90deg,
+        #ef4444 0px,
+        #ef4444 14px,
+        #f8fafc 14px,
+        #f8fafc 28px
+    );
+    margin: 0 2px;
+}
+
+.goal-frame-body {
+    display: flex;
+    border-left: 7px solid #ef4444;
+    border-right: 7px solid #ef4444;
+    border-bottom: 2px dashed rgba(148, 163, 184, 0.45);
+    background: rgba(15, 28, 51, 0.65);
+}
+
+.goal-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 38px);
+    gap: 4px;
+    padding: 5px;
+}
+
+.goal-cell-btn {
+    border-radius: 6px;
+    border: 1px solid #2b446e;
+    background: rgba(24, 41, 71, 0.85);
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.1s;
+}
+
+.goal-cell-btn.active {
+    background: #06b6d4;
+    border-color: #a5f3fc;
+    color: #04131c;
+    font-weight: 800;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.55);
+}
+
+.goal-sub-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.sub-chip-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border-radius: 7px;
+    border: 1px solid #2c436e;
+    background: var(--bg-card);
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sub-chip-btn.active {
+    background: #7c3aed;
+    border-color: #c4b5fd;
+    color: #ffffff;
+}
+
+.sub-chip-btn.clear-chip {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    color: #94a3b8;
+}
+
+/* 6m〜9m実測コート図エリア */
+.court-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.court-telemetry {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.telemetry-pill {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #08101e;
+    border: 1px solid #23385c;
+    color: #93c5fd;
+}
+
+.court-canvas-wrap {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    position: relative;
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#shot-court-canvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: crosshair;
+    display: block;
+}
+
+.court-quick-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.quick-zone-btn {
+    padding: 7px 6px;
+    border-radius: 7px;
+    border: 1px solid #2c436e;
+    background: var(--bg-card);
+    color: #e2e8f0;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.quick-zone-btn.active {
+    background: #0284c7;
+    border-color: #7dd3fc;
+    color: #ffffff;
+}
+
+/* ==========================================
+   右パネル：結果ボタン＆直近プレイログ
+========================================== */
+.result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    flex-shrink: 0;
+}
+
+.result-btn {
+    padding: 12px 6px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 800;
+    color: #ffffff;
+    cursor: pointer;
+    transition: transform 0.06s, filter 0.12s;
+}
+
+.result-btn:active {
+    transform: scale(0.97);
+}
+
+.result-btn.goal {
+    background: #1d4ed8;
+    border-color: #60a5fa;
+}
+
+.result-btn.save {
+    background: #b45309;
+    border-color: #fbbf24;
+}
+
+.result-btn.miss {
+    background: #be123c;
+    border-color: #fda4af;
+}
+
+.result-btn.turnover {
+    background: #334155;
+    border-color: #94a3b8;
+}
+
+.result-btn.two-min {
+    background: #9a3412;
+    border-color: #fb923c;
+}
+
+.result-btn.warning {
+    background: #7f1d1d;
+    border-color: #f87171;
+}
+
+.log-box {
+    flex: 1;
+    min-height: 0;
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 10px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.undo-btn {
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid #3b527a;
+    background: #182744;
+    color: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.undo-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.play-log-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.log-empty {
+    font-size: 12px;
+    color: #64748b;
+    text-align: center;
+    padding: 16px 6px;
+}
+
+.log-item {
+    background: #111e36;
+    border: 1px solid #22375c;
+    border-left: 4px solid #3b82f6;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.log-item.opp {
+    border-left-color: #f43f5e;
+}
+
+.log-item-top {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.log-item-sub {
+    color: #94a3b8;
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+/* ==========================================
+   学校用タブレット（縦画面・狭幅画面）レスポンシブ対応
+========================================== */
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1024px) {
+    body {
+        overflow: auto;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .top-header {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 6px 10px;
+    }
+
+    .mode-tabs {
+        order: 3;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .tab-btn {
+        flex: 1;
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
+    .workspace {
+        display: flex;
+        flex-direction: column;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .panel {
+        padding: 8px;
+    }
+
+    .jersey-grid {
+        grid-template-columns: repeat(8, 1fr);
+        gap: 5px;
+    }
+
+    .jersey-btn {
+        min-height: 34px;
+        font-size: 13px;
+    }
+
+    .goal-grid {
+        grid-template-rows: repeat(3, 34px);
+    }
+
+    .court-canvas-wrap {
+        height: 230px;
+        flex: none;
+    }
+
+    .result-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .result-btn {
+        padding: 10px 4px;
+        font-size: 12px;
+    }
+
+    .play-log-list {
+        max-height: 150px;
+    }
+}
