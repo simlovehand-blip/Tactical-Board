@@ -1,11 +1,11 @@
-const CACHE_NAME = 'tactical-board-v4';
+const CACHE_NAME = 'tb-stat-prod-v1';
 const ASSETS = [
     './',
     './index.html',
-    './style.css?v=4',
-    './app.js?v=4',
-    './manifest.json?v=4',
-    './icon.png?v=4'
+    './style.css',
+    './app.js',
+    './manifest.json',
+    './icon.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -18,9 +18,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
-            Promise.all(
-                keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-            )
+            Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
         )
     );
     self.clients.claim();
@@ -29,15 +27,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
     event.respondWith(
-        caches.match(event.request, { ignoreSearch: true }).then((cached) => {
-            if (cached) return cached;
-            return fetch(event.request).then((response) => {
-                if (response && response.status === 200 && response.type === 'basic') {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-                }
-                return response;
-            });
-        })
+        fetch(event.request)
+            .then((res) => {
+                const copy = res.clone();
+                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                return res;
+            })
+            .catch(() => caches.match(event.request, { ignoreSearch: true }))
     );
 });
