@@ -448,6 +448,7 @@ body {
     flex: 1;
     min-height: 0;
     width: 100%;
+    max-height: 240px; /* ← コンパクトにする高さ上限（好みに応じて200〜260pxで調整可） */
     position: relative;
     background: #08101e;
     border: 1px solid #1e3354;
