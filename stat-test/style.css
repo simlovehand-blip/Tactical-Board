@@ -9,7 +9,6 @@
     --text-main: #f1f5f9;
     --text-muted: #94a3b8;
     --accent-own: #2563eb;
-    --accent-own-glow: #3b82f6;
     --accent-opp: #e11d48;
     --accent-cyan: #06b6d4;
     --accent-green: #10b981;
@@ -104,15 +103,32 @@ body {
 }
 
 .tab-btn:disabled {
-    opacity: 0.45;
+    opacity: 0.42;
     cursor: not-allowed;
 }
 
 .hud-area {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
+}
+
+.half-badge-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #38bdf8;
+    background: rgba(2, 132, 199, 0.35);
+    color: #e0f2fe;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.half-badge-btn.second {
+    border-color: #f59e0b;
+    background: rgba(180, 83, 9, 0.45);
+    color: #fef3c7;
 }
 
 .timer-box {
@@ -186,13 +202,13 @@ body {
 }
 
 /* ==========================================
-   メイン3列ワークスペース（タブレット横画面）
+   メイン3列ワークスペース（試合入力）
 ========================================== */
 .workspace {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 210px minmax(0, 1fr) 245px;
+    grid-template-columns: 220px minmax(0, 1fr) 245px;
     gap: 10px;
     padding: 10px;
 }
@@ -209,7 +225,7 @@ body {
 }
 
 /* ==========================================
-   左パネル：チーム切替＆背番号
+   左パネル：チーム切替＆背番号（1〜18）
 ========================================== */
 .team-switch {
     display: grid;
@@ -267,7 +283,7 @@ body {
 }
 
 .selected-badge {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #93c5fd;
     background: #09111f;
@@ -275,6 +291,9 @@ body {
     padding: 5px 8px;
     border-radius: 7px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 135px;
 }
 
 .jersey-grid {
@@ -282,7 +301,7 @@ body {
     min-height: 0;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    gap: 5px;
     align-content: stretch;
 }
 
@@ -291,14 +310,36 @@ body {
     border: 1px solid #273d63;
     background: var(--bg-card);
     color: #e2e8f0;
-    font-size: 15px;
-    font-weight: 800;
     cursor: pointer;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 36px;
+    padding: 2px;
     transition: 0.1s;
+    overflow: hidden;
+}
+
+.jersey-num {
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.jersey-name {
+    font-size: 9px;
+    color: #94a3b8;
+    line-height: 1.1;
+    margin-top: 2px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jersey-btn.active .jersey-name {
+    color: #e0f2fe;
 }
 
 .jersey-btn.active.own {
@@ -338,7 +379,6 @@ body {
     padding: 10px 14px 8px 14px;
 }
 
-/* ゴール枠の視覚表現（赤白ストライプ風フレーム） */
 .goal-crossbar {
     height: 7px;
     border-radius: 4px 4px 0 0;
@@ -417,7 +457,6 @@ body {
     color: #94a3b8;
 }
 
-/* 6m〜9m実測コート図エリア */
 .court-section {
     flex: 1;
     min-height: 0;
@@ -448,7 +487,7 @@ body {
     flex: 1;
     min-height: 0;
     width: 100%;
-    max-height: 240px; /* ← コンパクトにする高さ上限（好みに応じて200〜260pxで調整可） */
+    max-height: 240px;
     position: relative;
     background: #08101e;
     border: 1px solid #1e3354;
@@ -516,35 +555,12 @@ body {
     transform: scale(0.97);
 }
 
-.result-btn.goal {
-    background: #1d4ed8;
-    border-color: #60a5fa;
-}
-
-.result-btn.save {
-    background: #b45309;
-    border-color: #fbbf24;
-}
-
-.result-btn.miss {
-    background: #be123c;
-    border-color: #fda4af;
-}
-
-.result-btn.turnover {
-    background: #334155;
-    border-color: #94a3b8;
-}
-
-.result-btn.two-min {
-    background: #9a3412;
-    border-color: #fb923c;
-}
-
-.result-btn.warning {
-    background: #7f1d1d;
-    border-color: #f87171;
-}
+.result-btn.goal { background: #1d4ed8; border-color: #60a5fa; }
+.result-btn.save { background: #b45309; border-color: #fbbf24; }
+.result-btn.miss { background: #be123c; border-color: #fda4af; }
+.result-btn.turnover { background: #334155; border-color: #94a3b8; }
+.result-btn.two-min { background: #9a3412; border-color: #fb923c; }
+.result-btn.warning { background: #7f1d1d; border-color: #f87171; }
 
 .log-box {
     flex: 1;
@@ -631,6 +647,238 @@ body {
 }
 
 /* ==========================================
+   タブ4：名簿・CSV出力・データ管理画面
+========================================== */
+.roster-workspace {
+    flex: 1;
+    min-height: 0;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.roster-grid-layout {
+    max-width: 1160px;
+    margin: 0 auto;
+    height: 100%;
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 12px;
+}
+
+.card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.card-title-row h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.autosave-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid #10b981;
+    color: #6ee7b7;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.text-input {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1px solid #2c436e;
+    background: #08101e;
+    color: #ffffff;
+    font-size: 13px;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.text-input:focus {
+    outline: none;
+    border-color: #38bdf8;
+}
+
+.summary-stats-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 9px;
+    padding: 10px;
+}
+
+.stat-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.stat-mini-label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.stat-mini-val {
+    font-size: 16px;
+    font-weight: 800;
+    color: #38bdf8;
+}
+
+.btn-primary-full {
+    width: 100%;
+    padding: 12px;
+    border-radius: 9px;
+    border: 1px solid #34d399;
+    background: #059669;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.btn-primary-full:active {
+    transform: scale(0.98);
+}
+
+.helper-note {
+    margin: 0;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.card-divider {
+    border: none;
+    border-top: 1px solid #1e3354;
+    margin: 4px 0;
+}
+
+.danger-zone {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.danger-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fda4af;
+}
+
+.btn-danger-outline {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #e11d48;
+    background: rgba(225, 29, 72, 0.14);
+    color: #fecdd3;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.roster-team-tabs {
+    display: flex;
+    gap: 6px;
+}
+
+.roster-team-btn {
+    padding: 6px 12px;
+    border-radius: 7px;
+    border: 1px solid #2c436e;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.roster-team-btn.active.own {
+    background: #1d4ed8;
+    border-color: #93c5fd;
+    color: #ffffff;
+}
+
+.roster-team-btn.active.opp {
+    background: #be123c;
+    border-color: #fda4af;
+    color: #ffffff;
+}
+
+.roster-table-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid #1e3354;
+    border-radius: 9px;
+    background: #08101e;
+}
+
+.roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.roster-table th {
+    position: sticky;
+    top: 0;
+    background: #13223d;
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid #233659;
+    z-index: 1;
+}
+
+.roster-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #172744;
+}
+
+.roster-num-cell {
+    font-weight: 800;
+    color: #93c5fd;
+    text-align: center;
+}
+
+.roster-name-input,
+.roster-pos-select {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #273d63;
+    background: #0f1b30;
+    color: #ffffff;
+    font-size: 13px;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+/* ==========================================
    学校用タブレット（縦画面・狭幅画面）レスポンシブ対応
 ========================================== */
 @media (max-width: 900px), (orientation: portrait) and (max-width: 1024px) {
@@ -670,13 +918,12 @@ body {
     }
 
     .jersey-grid {
-        grid-template-columns: repeat(8, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 5px;
     }
 
     .jersey-btn {
-        min-height: 34px;
-        font-size: 13px;
+        min-height: 36px;
     }
 
     .goal-grid {
@@ -684,7 +931,8 @@ body {
     }
 
     .court-canvas-wrap {
-        height: 230px;
+        height: 220px;
+        max-height: 220px;
         flex: none;
     }
 
@@ -700,5 +948,15 @@ body {
 
     .play-log-list {
         max-height: 150px;
+    }
+
+    .roster-grid-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+    }
+
+    .roster-table-wrap {
+        max-height: 420px;
     }
 }
