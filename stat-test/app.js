@@ -1,7 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
+    // 共通ストレージ定数（ステップ3で作戦盤と共有）
+    // ==========================================
+    const STORAGE_KEY = 'TB_STAT_SHARED_V1';
+    const MAX_JERSEY_NUM = 18;
+
+    // ==========================================
     // 要素取得
     // ==========================================
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const viewInput = document.getElementById('view-input');
+    const viewRoster = document.getElementById('view-roster');
+
     const jerseyGrid = document.getElementById('jersey-grid');
     const btnSelectGk = document.getElementById('btn-select-gk');
     const selectedPlayerBadge = document.getElementById('selected-player-badge');
@@ -20,34 +30,111 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const resultBtns = document.querySelectorAll('.result-btn');
     const playLogList = document.getElementById('play-log-list');
+    const logCountEl = document.getElementById('log-count');
     const btnUndo = document.getElementById('btn-undo');
 
+    const btnHalfToggle = document.getElementById('btn-half-toggle');
     const timerDisplay = document.getElementById('timer-display');
     const btnTimerToggle = document.getElementById('btn-timer-toggle');
     const btnTimerReset = document.getElementById('btn-timer-reset');
     const scoreOwnEl = document.getElementById('score-own');
     const scoreOppEl = document.getElementById('score-opp');
 
+    // 名簿・出力タブ要素
+    const matchTitleInput = document.getElementById('match-title-input');
+    const matchOpponentInput = document.getElementById('match-opponent-input');
+    const summaryTotalLogs = document.getElementById('summary-total-logs');
+    const summaryScore = document.getElementById('summary-score');
+    const btnExportCsv = document.getElementById('btn-export-csv');
+    const btnResetMatch = document.getElementById('btn-reset-match');
+    const rosterTeamBtns = document.querySelectorAll('.roster-team-btn');
+    const rosterTbody = document.getElementById('roster-tbody');
+    const autosaveStatus = document.getElementById('autosave-status');
+
     // ==========================================
-    // 状態管理
+    // 初期データ構造＆ストレージ読み書き
+    // ==========================================
+    function createDefaultRoster() {
+        const obj = {};
+        for (let i = 1; i <= MAX_JERSEY_NUM; i++) {
+            obj[String(i)] = { name: '', pos: i === 1 || i === 12 ? 'GK' : '' };
+        }
+        return obj;
+    }
+
+    function loadSavedData() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch (e) {
+            console.warn('保存データの読み込みに失敗:', e);
+            return null;
+        }
+    }
+
+    const saved = loadSavedData();
+
+    let matchInfo = (saved && saved.matchInfo) ? saved.matchInfo : {
+        title: '',
+        opponent: '',
+        half: '前半'
+    };
+
+    let roster = (saved && saved.roster) ? {
+        own: { ...createDefaultRoster(), ...(saved.roster.own || {}) },
+        opp: { ...createDefaultRoster(), ...(saved.roster.opp || {}) }
+    } : {
+        own: createDefaultRoster(),
+        opp: createDefaultRoster()
+    };
+
+    let historyLogs = (saved && saved.state && Array.isArray(saved.state.historyLogs)) ? saved.state.historyLogs : [];
+    let scoreOwn = (saved && saved.state && typeof saved.state.scoreOwn === 'number') ? saved.state.scoreOwn : 0;
+    let scoreOpp = (saved && saved.state && typeof saved.state.scoreOpp === 'number') ? saved.state.scoreOpp : 0;
+    let elapsedSec = (saved && saved.state && typeof saved.state.elapsedSec === 'number') ? saved.state.elapsedSec : 0;
+
+    let saveFlashTimer = null;
+    function saveAllData() {
+        try {
+            const payload = {
+                version: 1,
+                updatedAt: new Date().toISOString(),
+                matchInfo,
+                roster,
+                state: {
+                    scoreOwn,
+                    scoreOpp,
+                    elapsedSec,
+                    historyLogs
+                }
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+            if (autosaveStatus) {
+                autosaveStatus.textContent = '保存済み ✓';
+                clearTimeout(saveFlashTimer);
+                saveFlashTimer = setTimeout(() => {
+                    autosaveStatus.textContent = '自動保存ON';
+                }, 1200);
+            }
+        } catch (e) {
+            console.warn('データの自動保存に失敗:', e);
+        }
+    }
+
+    // ==========================================
+    // 操作状態
     // ==========================================
     let currentTeam = 'own';       // 'own' | 'opp'
-    let selectedPlayer = '1';      // '1'..'16' | 'GK'
+    let selectedPlayer = '1';      // '1'..'18' | 'GK'
     let selectedGoalCourse = null; // 'UL','UC','UR','ML','MC','MR','DL','DC','DR','post','block'
     let selectedQuickZone = null;  // '7m' | 'fastbreak' | 'empty'
+    let shotPoint = null;          // { x, y, zone, lane, depth, angleDeg, acuteAngleDeg, distM }
+    let activeRosterTeam = 'own';
 
-    // コート上タップ情報（半面20m×20m基準の相対座標 x:0..1, y:0..1）
-    let shotPoint = null;          // { x, y, zone, lane, depth, angleDeg, distM }
-    let historyLogs = [];
-    let scoreOwn = 0;
-    let scoreOpp = 0;
-
-    // タイマー状態
-    let elapsedSec = 0;
     let timerInterval = null;
     let isTimerRunning = false;
 
-    // ゴール9分割ラベル（ゴール正面から見た左右基準）
     const GOAL_ZONES = [
         { id: 'UL', label: '左上' }, { id: 'UC', label: '中上' }, { id: 'UR', label: '右上' },
         { id: 'ML', label: '左中' }, { id: 'MC', label: '中央' }, { id: 'MR', label: '右中' },
@@ -55,16 +142,57 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     // ==========================================
-    // 背番号グリッド初期化（1〜16）
+    // 上部タブ切替（試合入力 ⇔ 名簿・出力）
     // ==========================================
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.disabled) return;
+            const target = btn.dataset.tab;
+            tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+
+            if (target === 'input') {
+                viewInput.style.display = '';
+                viewRoster.style.display = 'none';
+                resizeCourtCanvas();
+            } else if (target === 'roster') {
+                viewInput.style.display = 'none';
+                viewRoster.style.display = 'block';
+                updateSummaryCardUI();
+                renderRosterTable();
+            }
+        });
+    });
+
+    // ==========================================
+    // 背番号グリッド初期化（1〜18・名簿名表示対応）
+    // ==========================================
+    function getPlayerDisplayName(team, playerKey) {
+        if (playerKey === 'GK') return 'GK';
+        const entry = roster[team] && roster[team][playerKey];
+        return entry && entry.name ? entry.name.trim() : '';
+    }
+
     function buildJerseyGrid() {
         jerseyGrid.innerHTML = '';
-        for (let i = 1; i <= 16; i++) {
+        for (let i = 1; i <= MAX_JERSEY_NUM; i++) {
             const numStr = String(i);
             const btn = document.createElement('button');
             btn.className = 'jersey-btn';
-            btn.textContent = numStr;
             btn.dataset.num = numStr;
+
+            const numSpan = document.createElement('span');
+            numSpan.className = 'jersey-num';
+            numSpan.textContent = numStr;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'jersey-name';
+            const pName = getPlayerDisplayName(currentTeam, numStr);
+            nameSpan.textContent = pName;
+            nameSpan.style.display = pName ? 'block' : 'none';
+
+            btn.appendChild(numSpan);
+            btn.appendChild(nameSpan);
+
             btn.addEventListener('click', () => {
                 selectedPlayer = numStr;
                 updatePlayerSelectionUI();
@@ -86,8 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const teamLabel = currentTeam === 'own' ? '自' : '相';
-        const playerLabel = isGk ? 'GK' : `#${selectedPlayer}`;
-        selectedPlayerBadge.textContent = `${teamLabel}: ${playerLabel}`;
+        if (isGk) {
+            selectedPlayerBadge.textContent = `${teamLabel}: GK`;
+        } else {
+            const pName = getPlayerDisplayName(currentTeam, selectedPlayer);
+            selectedPlayerBadge.textContent = pName
+                ? `${teamLabel}: #${selectedPlayer} ${pName}`
+                : `${teamLabel}: #${selectedPlayer}`;
+        }
     }
 
     btnSelectGk.addEventListener('click', () => {
@@ -99,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             currentTeam = btn.dataset.team;
             teamBtns.forEach(b => b.classList.toggle('active', b === btn));
-            updatePlayerSelectionUI();
+            buildJerseyGrid();
         });
     });
 
@@ -160,21 +294,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 6m〜9m実測コート図（LW/RWコーナー配置・LB/CB/RB広め版）
-    // 表示範囲：横 0〜20m（x: 0..1）、縦 0〜11.5m（y: 0..0.575）
+    // 6m〜9m実測コート図（角度計算修正済み）
     // ==========================================
     const MAX_VIEW_METERS_Y = 11.5;
     const COURT_WIDTH_M = 20.0;
 
-    // コーナー（LW/RW）の境界定数
-    const WING_MAX_Y = 6.5;       // ゴールラインから6.5mまでをコーナー領域とする
-    const WING_TOP_X = 3.5;       // y=0m地点でのサイドからの幅（3.5m）
-    const WING_BOT_X = 2.0;       // y=6.5m地点でのサイドからの幅（2.0m）
-    const CB_HALF_WIDTH = 3.0;    // CBの左右幅（中心から±3.0m＝計6.0m幅）
+    const WING_MAX_Y = 6.5;
+    const WING_TOP_X = 3.5;
+    const WING_BOT_X = 2.0;
+    const CB_HALF_WIDTH = 3.0;
 
     function resizeCourtCanvas() {
         const wrap = shotCanvas.parentElement;
         const rect = wrap.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const w = Math.max(240, Math.floor(rect.width));
         const h = Math.max(140, Math.floor(rect.height));
@@ -220,18 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return { nx, ny: yMeters / 20.0 };
     }
 
-    // エリア判定：LW/RWは左右の隅（コーナー）、それ以外はLB/CB/RBを広く確保
     function classifyShotArea(nx, ny) {
         const xMeters = nx * COURT_WIDTH_M; // 0..20m
         const yMeters = ny * 20.0;           // 0..11.5m
-        const dxCenter = xMeters - 10.0;     // -10..+10m
+        const dxCenter = xMeters - 10.0;     // ゴール中心からの左右オフセット(-10..+10m)
         const distM = Math.hypot(dxCenter, yMeters);
 
-        // ゴール中心(10, 0)を原点とし、左サイド=0°、正面=90°、右サイド=180°
-        const radFromLeft = Math.atan2(yMeters, xMeters);
-        const angleDeg = Math.round((radFromLeft * 180) / Math.PI);
+        // 【修正済み】ゴール中心(10, 0)を原点とし、左サイド=0°、正面=90°、右サイド=180°
+        const radFromGoalCenter = Math.atan2(yMeters, -dxCenter);
+        const angleDeg = Math.round((radFromGoalCenter * 180) / Math.PI);
+        const acuteAngleDeg = Math.min(angleDeg, 180 - angleDeg);
 
-        // 深さに応じたコーナー境界幅
         const wingLimitX = WING_TOP_X - (Math.min(yMeters, WING_MAX_Y) / WING_MAX_Y) * (WING_TOP_X - WING_BOT_X);
 
         let lane = 'CB';
@@ -259,6 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lane,
             depth,
             angleDeg,
+            acuteAngleDeg,
             distM: Number(distM.toFixed(1))
         };
     }
@@ -278,7 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         telemetryZone.textContent = `エリア: ${shotPoint.zone}`;
-        telemetryAngle.textContent = `角度: ${shotPoint.angleDeg}°`;
+        telemetryAngle.textContent = shotPoint.angleDeg > 90
+            ? `角度: ${shotPoint.angleDeg}° (射角${shotPoint.acuteAngleDeg}°)`
+            : `角度: ${shotPoint.angleDeg}°`;
         telemetryDist.textContent = `距離: ${shotPoint.distM.toFixed(1)}m`;
     }
 
@@ -299,9 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const leftPost = normToCanvas(m, 0.5 - 1.5 / 20, 0);
         const rightPost = normToCanvas(m, 0.5 + 1.5 / 20, 0);
 
-        // LW / RW コーナーゾーンをうっすら色分け（左右の上隅）
+        // LW / RW コーナーゾーン色分け
         ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
-        // LW コーナー
         ctx.beginPath();
         ctx.moveTo(m.x0, m.y0);
         ctx.lineTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
@@ -310,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.closePath();
         ctx.fill();
 
-        // RW コーナー
         ctx.beginPath();
         ctx.moveTo(m.x0 + m.w, m.y0);
         ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
@@ -319,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.closePath();
         ctx.fill();
 
-        // 6mゴールエリア（塗りつぶし＋実線）
+        // 6mゴールエリア
         ctx.beginPath();
         ctx.arc(leftPost.cx, leftPost.cy, 6 * pxPerM, Math.PI, Math.PI / 2, true);
         ctx.lineTo(rightPost.cx, leftPost.cy + 6 * pxPerM);
@@ -331,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = '#34d399';
         ctx.stroke();
 
-        // 9mフリースローライン（点線）
+        // 9mフリースローライン
         ctx.beginPath();
         ctx.setLineDash([7, 6]);
         ctx.arc(leftPost.cx, leftPost.cy, 9 * pxPerM, Math.PI, Math.PI / 2, true);
@@ -352,27 +485,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
         ctx.stroke();
 
-        // エリア境界ガイド線
+        // 境界ガイド線
         ctx.save();
         ctx.setLineDash([4, 5]);
         ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
         ctx.lineWidth = 1.2;
 
-        // LW コーナー境界線
         ctx.beginPath();
         ctx.moveTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
         ctx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
         ctx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
         ctx.stroke();
 
-        // RW コーナー境界線
         ctx.beginPath();
         ctx.moveTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
         ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
         ctx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
         ctx.stroke();
 
-        // LB / CB ＆ CB / RB 境界線（中心から±3.0m）
         const lbcbX = m.x0 + (10 - CB_HALF_WIDTH) * pxPerM;
         const cbrbX = m.x0 + (10 + CB_HALF_WIDTH) * pxPerM;
         ctx.beginPath();
@@ -383,26 +513,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.stroke();
         ctx.restore();
 
-        // レーンラベル描画
+        // レーンラベル
         ctx.fillStyle = 'rgba(226, 232, 240, 0.78)';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
-        // LW / RW は左右の上隅に配置
         ctx.fillText('LW', m.x0 + 1.3 * pxPerM, m.y0 + 3.2 * pxPerM);
         ctx.fillText('RW', m.x0 + (COURT_WIDTH_M - 1.3) * pxPerM, m.y0 + 3.2 * pxPerM);
-        // LB / CB / RB は広く配置
         ctx.fillText('LB', m.x0 + 3.8 * pxPerM, m.y0 + 9.8 * pxPerM);
         ctx.fillText('CB', m.x0 + 10.0 * pxPerM, m.y0 + 9.8 * pxPerM);
         ctx.fillText('RB', m.x0 + 16.2 * pxPerM, m.y0 + 9.8 * pxPerM);
 
-        // 距離ラベル（6m / 9m）
+        // 距離ラベル
         ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText('6m', m.x0 + m.w - 6, m.y0 + 6 * pxPerM - 4);
         ctx.fillText('9m', m.x0 + m.w - 6, m.y0 + 9 * pxPerM - 4);
 
-        // 過去の記録マーカーを薄くプロット
+        // 過去プロット
         historyLogs.forEach(item => {
             if (!item.point) return;
             const pt = normToCanvas(m, item.point.x, item.point.y);
@@ -418,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         });
 
-        // 現在選択中の打点とゴールへの角度ガイド線
+        // 選択中の打点とゴール中心への角度線
         if (shotPoint && !selectedQuickZone) {
             const activePt = normToCanvas(m, shotPoint.x, shotPoint.y);
 
@@ -473,6 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lane: info.lane,
             depth: info.depth,
             angleDeg: info.angleDeg,
+            acuteAngleDeg: info.acuteAngleDeg,
             distM: info.distM
         };
 
@@ -508,8 +637,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // タイマー＆記録・Undo処理
+    // 前後半・タイマー・スコア・記録処理
     // ==========================================
+    function updateHalfUI() {
+        btnHalfToggle.textContent = matchInfo.half;
+        btnHalfToggle.classList.toggle('second', matchInfo.half === '後半');
+    }
+
+    btnHalfToggle.addEventListener('click', () => {
+        matchInfo.half = (matchInfo.half === '前半') ? '後半' : '前半';
+        updateHalfUI();
+        saveAllData();
+    });
+
     function formatTimer(sec) {
         const mm = String(Math.floor(sec / 60)).padStart(2, '0');
         const ss = String(sec % 60).padStart(2, '0');
@@ -523,6 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isTimerRunning = false;
             btnTimerToggle.textContent = '▶';
             btnTimerToggle.classList.remove('running');
+            saveAllData();
         } else {
             isTimerRunning = true;
             btnTimerToggle.textContent = '❚❚';
@@ -530,6 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
             timerInterval = setInterval(() => {
                 elapsedSec++;
                 timerDisplay.textContent = formatTimer(elapsedSec);
+                if (elapsedSec % 10 === 0) saveAllData();
             }, 1000);
         }
     });
@@ -544,6 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         elapsedSec = 0;
         timerDisplay.textContent = '00:00';
+        saveAllData();
     });
 
     function updateScoreUI() {
@@ -562,6 +705,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderHistoryUI() {
         btnUndo.disabled = historyLogs.length === 0;
+        logCountEl.textContent = String(historyLogs.length);
+
         if (historyLogs.length === 0) {
             playLogList.innerHTML = '<li class="log-empty">まだ記録がありません</li>';
             return;
@@ -575,8 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const top = document.createElement('div');
             top.className = 'log-item-top';
             const teamTag = item.team === 'own' ? '自' : '相';
-            const pTag = item.player === 'GK' ? 'GK' : `#${item.player}`;
-            top.textContent = `${item.timeStr} [${teamTag}] ${pTag} ${item.resultLabel}`;
+            const pTag = item.player === 'GK' ? 'GK' : `#${item.player}${item.playerName ? ' ' + item.playerName : ''}`;
+            top.textContent = `[${item.half || '前半'}] ${item.timeStr} [${teamTag}] ${pTag} ${item.resultLabel}`;
 
             const sub = document.createElement('div');
             sub.className = 'log-item-sub';
@@ -599,12 +744,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let zoneLabel = '';
             let angleDeg = null;
+            let acuteAngleDeg = null;
+            let distM = null;
+
             if (selectedQuickZone) {
                 const qMap = { '7m': '7mスロー', 'fastbreak': '速攻(FB)', 'empty': 'エンプティ' };
                 zoneLabel = qMap[selectedQuickZone] || selectedQuickZone;
             } else if (shotPoint) {
                 zoneLabel = shotPoint.zone;
                 angleDeg = shotPoint.angleDeg;
+                acuteAngleDeg = shotPoint.acuteAngleDeg;
+                distM = shotPoint.distM;
             }
 
             let courseLabel = '';
@@ -627,13 +777,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const entry = {
                 id: Date.now() + Math.random(),
+                half: matchInfo.half,
                 timeStr: formatTimer(elapsedSec),
                 team: currentTeam,
                 player: selectedPlayer,
+                playerName: getPlayerDisplayName(currentTeam, selectedPlayer),
                 result: resultKey,
                 resultLabel,
                 zoneLabel,
                 angleDeg,
+                acuteAngleDeg,
+                distM,
                 courseLabel,
                 point: shotPoint ? { ...shotPoint } : null
             };
@@ -641,6 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
             historyLogs.push(entry);
             renderHistoryUI();
             renderCourt();
+            saveAllData();
 
             selectedGoalCourse = null;
             selectedQuickZone = null;
@@ -661,11 +816,192 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderHistoryUI();
         renderCourt();
+        saveAllData();
+    });
+
+    // ==========================================
+    // 名簿・CSV出力・データ管理タブ処理
+    // ==========================================
+    function updateSummaryCardUI() {
+        matchTitleInput.value = matchInfo.title || '';
+        matchOpponentInput.value = matchInfo.opponent || '';
+        summaryTotalLogs.textContent = `${historyLogs.length} 件`;
+        summaryScore.textContent = `${scoreOwn} - ${scoreOpp}`;
+    }
+
+    matchTitleInput.addEventListener('input', () => {
+        matchInfo.title = matchTitleInput.value;
+        saveAllData();
+    });
+
+    matchOpponentInput.addEventListener('input', () => {
+        matchInfo.opponent = matchOpponentInput.value;
+        saveAllData();
+    });
+
+    rosterTeamBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            activeRosterTeam = btn.dataset.rosterTeam;
+            rosterTeamBtns.forEach(b => b.classList.toggle('active', b === btn));
+            renderRosterTable();
+        });
+    });
+
+    const POS_OPTIONS = ['', 'GK', 'LW', 'LB', 'CB', 'RB', 'RW', 'PV'];
+
+    function renderRosterTable() {
+        rosterTbody.innerHTML = '';
+        const targetMap = roster[activeRosterTeam];
+
+        for (let i = 1; i <= MAX_JERSEY_NUM; i++) {
+            const numStr = String(i);
+            const info = targetMap[numStr] || { name: '', pos: '' };
+
+            const tr = document.createElement('tr');
+
+            const tdNum = document.createElement('td');
+            tdNum.className = 'roster-num-cell';
+            tdNum.textContent = `#${numStr}`;
+
+            const tdName = document.createElement('td');
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'roster-name-input';
+            nameInput.placeholder = `選手名 (#${numStr})`;
+            nameInput.value = info.name || '';
+            nameInput.addEventListener('input', () => {
+                targetMap[numStr].name = nameInput.value;
+                saveAllData();
+                if (activeRosterTeam === currentTeam) {
+                    buildJerseyGrid();
+                }
+            });
+            tdName.appendChild(nameInput);
+
+            const tdPos = document.createElement('td');
+            const posSelect = document.createElement('select');
+            posSelect.className = 'roster-pos-select';
+            POS_OPTIONS.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p || '未設定';
+                if (info.pos === p) opt.selected = true;
+                posSelect.appendChild(opt);
+            });
+            posSelect.addEventListener('change', () => {
+                targetMap[numStr].pos = posSelect.value;
+                saveAllData();
+            });
+            tdPos.appendChild(posSelect);
+
+            tr.appendChild(tdNum);
+            tr.appendChild(tdName);
+            tr.appendChild(tdPos);
+            rosterTbody.appendChild(tr);
+        }
+    }
+
+    // Excel用 CSV ダウンロード（BOM付きUTF-8）
+    btnExportCsv.addEventListener('click', () => {
+        const headers = [
+            'No', '前後半', '時間', 'チーム', '背番号', '選手名',
+            '結果', 'エリア', 'レーン', '深さ',
+            '角度(0-180)', '射角(0-90)', '距離(m)',
+            'X座標(m)', 'Y座標(m)', 'ゴールコース'
+        ];
+
+        const escapeCsv = (val) => {
+            if (val === null || val === undefined) return '';
+            const str = String(val);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+
+        const rows = historyLogs.map((item, idx) => {
+            const teamName = item.team === 'own' ? '自チーム' : '相手チーム';
+            const lane = item.point ? item.point.lane : '';
+            const depth = item.point ? item.point.depth : '';
+            const xM = item.point ? (item.point.x * COURT_WIDTH_M).toFixed(2) : '';
+            const yM = item.point ? (item.point.y * 20.0).toFixed(2) : '';
+
+            return [
+                idx + 1,
+                item.half || '前半',
+                item.timeStr,
+                teamName,
+                item.player,
+                item.playerName || '',
+                item.resultLabel,
+                item.zoneLabel || '',
+                lane,
+                depth,
+                item.angleDeg !== null && item.angleDeg !== undefined ? item.angleDeg : '',
+                item.acuteAngleDeg !== null && item.acuteAngleDeg !== undefined ? item.acuteAngleDeg : '',
+                item.distM !== null && item.distM !== undefined ? item.distM : '',
+                xM,
+                yM,
+                item.courseLabel || ''
+            ].map(escapeCsv).join(',');
+        });
+
+        const csvString = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        const now = new Date();
+        const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const oppClean = (matchInfo.opponent || '試合データ').replace(/[\\/:*?"<>|]/g, '_');
+        const filename = `STAT_${ymd}_${oppClean}.csv`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // 試合データリセット（名簿は維持）
+    btnResetMatch.addEventListener('click', () => {
+        const ok = window.confirm('現在のスコア・タイマー・プレイ記録をすべて消去して新しい試合を始めますか？（登録した選手名簿は残ります）');
+        if (!ok) return;
+
+        if (isTimerRunning) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isTimerRunning = false;
+            btnTimerToggle.textContent = '▶';
+            btnTimerToggle.classList.remove('running');
+        }
+
+        historyLogs = [];
+        scoreOwn = 0;
+        scoreOpp = 0;
+        elapsedSec = 0;
+        matchInfo.half = '前半';
+        shotPoint = null;
+        selectedGoalCourse = null;
+        selectedQuickZone = null;
+
+        timerDisplay.textContent = '00:00';
+        updateHalfUI();
+        updateScoreUI();
+        renderHistoryUI();
+        updateTelemetryUI();
+        updateGoalSelectionUI();
+        renderCourt();
+        updateSummaryCardUI();
+        saveAllData();
     });
 
     // ==========================================
     // 初期化＆リサイズ追従
     // ==========================================
+    timerDisplay.textContent = formatTimer(elapsedSec);
+    updateHalfUI();
     buildJerseyGrid();
     buildGoalGrid();
     updateTelemetryUI();
@@ -674,6 +1010,8 @@ document.addEventListener('DOMContentLoaded', () => {
     resizeCourtCanvas();
 
     window.addEventListener('resize', () => {
-        resizeCourtCanvas();
+        if (viewInput.style.display !== 'none') {
+            resizeCourtCanvas();
+        }
     });
 });
