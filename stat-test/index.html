@@ -6,21 +6,21 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Tactical-Board STAT (Step 2)</title>
+    <title>Tactical-Board STAT (Step 3)</title>
     <link id="dynamic-css" rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 上部ヘッダー（タブ・タイマー・前後半・スコア） -->
+    <!-- 上部ヘッダー（全4タブ有効化・タイマー・前後半・スコア） -->
     <header class="top-header">
         <div class="brand-area">
             <span class="brand-title">Tactical-Board</span>
-            <span class="brand-badge">STAT v2</span>
+            <span class="brand-badge">STAT v3</span>
         </div>
 
         <nav class="mode-tabs" aria-label="画面切替">
             <button class="tab-btn active" data-tab="input">試合入力</button>
-            <button class="tab-btn" data-tab="map" disabled title="ステップ3で実装予定">分析マップ</button>
-            <button class="tab-btn" data-tab="tactics" disabled title="ステップ3で実装予定">作戦盤</button>
+            <button class="tab-btn" data-tab="map">分析マップ</button>
+            <button class="tab-btn" data-tab="tactics">作戦盤</button>
             <button class="tab-btn" data-tab="roster">名簿・出力</button>
         </nav>
 
@@ -41,9 +41,10 @@
         </div>
     </header>
 
-    <!-- タブ1：試合入力ワークスペース -->
+    <!-- ==========================================
+         タブ1：試合入力ワークスペース
+    ========================================== -->
     <main id="view-input" class="workspace">
-        <!-- 左パネル：チーム切替・GK・背番号 -->
         <section class="panel player-panel">
             <div class="team-switch">
                 <button class="team-btn active own" data-team="own">自チーム</button>
@@ -58,9 +59,7 @@
             <div id="jersey-grid" class="jersey-grid" aria-label="背番号選択"></div>
         </section>
 
-        <!-- 中央パネル：ゴール9分割＆6m〜9m実測コート図 -->
         <section class="panel center-panel">
-            <!-- 上段：ゴール9分割＆枠外・ブロック -->
             <div class="goal-section">
                 <div class="goal-outer">
                     <div class="goal-crossbar"></div>
@@ -73,7 +72,6 @@
                 </div>
             </div>
 
-            <!-- 下段：6m〜9m実測コート図（LW/RWコーナー配置・LB/CB/RB広め） -->
             <div class="court-section">
                 <div class="court-telemetry">
                     <span id="telemetry-zone" class="telemetry-pill">エリア: 未選択</span>
@@ -93,7 +91,6 @@
             </div>
         </section>
 
-        <!-- 右パネル：結果確定＆直近プレイログ -->
         <section class="panel action-panel">
             <div class="result-grid">
                 <button class="result-btn goal" data-result="goal">得点</button>
@@ -116,10 +113,165 @@
         </section>
     </main>
 
-    <!-- タブ4：名簿・CSV出力・データ管理 -->
+    <!-- ==========================================
+         タブ2：分析マップ（GK分析・DF分析・決定率）
+    ========================================== -->
+    <section id="view-map" class="map-workspace" style="display: none;">
+        <div class="filter-toolbar panel">
+            <div class="filter-group">
+                <button class="map-team-btn active own" data-map-team="own">自チーム攻撃（シュート分析）</button>
+                <button class="map-team-btn opp" data-map-team="opp">相手チーム攻撃（GK・DF分析）</button>
+            </div>
+
+            <div class="filter-group">
+                <select id="map-half-filter" class="filter-select" aria-label="前後半絞り込み">
+                    <option value="all">全時間帯（前半＋後半）</option>
+                    <option value="前半">前半のみ</option>
+                    <option value="後半">後半のみ</option>
+                </select>
+
+                <select id="map-player-filter" class="filter-select" aria-label="選手絞り込み">
+                    <option value="all">全選手</option>
+                </select>
+
+                <label class="toggle-check">
+                    <input type="checkbox" id="map-show-lines" checked>
+                    <span>角度ライン表示</span>
+                </label>
+            </div>
+
+            <div class="map-kpi-strip">
+                <span class="kpi-pill">シュート: <strong id="kpi-shots">0</strong>本</span>
+                <span class="kpi-pill">得点: <strong id="kpi-goals">0</strong>点</span>
+                <span class="kpi-pill" id="kpi-rate-pill">決定率: <strong id="kpi-rate">0.0%</strong></span>
+            </div>
+        </div>
+
+        <div class="map-main-grid">
+            <!-- 左：6m〜9m実測シュートマップ -->
+            <div class="panel map-court-card">
+                <div class="card-title-row">
+                    <h2>シュート打点・角度マップ（6m〜9m）</h2>
+                    <div class="map-legend">
+                        <span class="leg-item"><i class="dot-goal"></i>得点</span>
+                        <span class="leg-item"><i class="dot-save"></i>GKセーブ</span>
+                        <span class="leg-item"><i class="dot-miss"></i>枠外・ブロック</span>
+                    </div>
+                </div>
+                <div class="map-canvas-wrap">
+                    <canvas id="analysis-court-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 右：ゴール9分割ヒートマップ＆エリア別集計 -->
+            <div class="map-right-col">
+                <div class="panel map-goal-card">
+                    <div class="card-title-row">
+                        <h2 id="map-goal-title">ゴールコース別 決定率</h2>
+                        <span class="helper-note" id="map-special-counts">ポスト:0 / ブロック:0</span>
+                    </div>
+                    <div class="analysis-goal-outer">
+                        <div class="goal-crossbar"></div>
+                        <div class="goal-frame-body">
+                            <div id="analysis-goal-grid" class="analysis-goal-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel map-table-card">
+                    <div class="card-title-row">
+                        <h2>エリア・距離帯別 集計</h2>
+                    </div>
+                    <div class="analysis-table-wrap">
+                        <table class="analysis-table">
+                            <thead>
+                                <tr>
+                                    <th>エリア / 区分</th>
+                                    <th>本数</th>
+                                    <th>得点</th>
+                                    <th>セーブ</th>
+                                    <th id="th-rate-col">決定率</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analysis-area-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         タブ3：作戦盤（Tactical-Board ＋ STATデータ重ね表示）
+    ========================================== -->
+    <section id="view-tactics" class="tactics-workspace" style="display: none;">
+        <!-- 上段ツールバー：描画ツール・色・コート・STAT重ね表示 -->
+        <div class="tactics-toolbar panel">
+            <div class="tool-cluster">
+                <button class="tb-tool-btn active" data-tb-tool="move">✋ 移動</button>
+                <button class="tb-tool-btn" data-tb-tool="line">╱ 実線</button>
+                <button class="tb-tool-btn" data-tb-tool="dashed">┄ 点線</button>
+                <button class="tb-tool-btn" data-tb-tool="arrow">↗ 矢印</button>
+                <button class="tb-tool-btn" data-tb-tool="erase">⌫ 消去</button>
+            </div>
+
+            <div class="tool-cluster color-cluster">
+                <button class="color-swatch active" data-tb-color="#facc15" style="background:#facc15;" title="黄"></button>
+                <button class="color-swatch" data-tb-color="#ffffff" style="background:#ffffff;" title="白"></button>
+                <button class="color-swatch" data-tb-color="#38bdf8" style="background:#38bdf8;" title="水色"></button>
+                <button class="color-swatch" data-tb-color="#fb7185" style="background:#fb7185;" title="赤"></button>
+                <button id="btn-tb-undo-line" class="tb-mini-btn">線1つ戻る</button>
+                <button id="btn-tb-clear-lines" class="tb-mini-btn">線全消去</button>
+            </div>
+
+            <div class="tool-cluster">
+                <button id="btn-tb-court-mode" class="tb-mini-btn accent">コート: 半面</button>
+                <select id="tb-stat-overlay" class="filter-select" title="STATデータの重ね表示">
+                    <option value="off">STAT重ね表示: OFF</option>
+                    <option value="own">STAT重ね: 自チーム攻撃</option>
+                    <option value="opp">STAT重ね: 相手攻撃(GK・DF分析)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 中段バー：DF陣形プリセット＆キーフレーム（コマ送りアニメーション） -->
+        <div class="tactics-subbar panel">
+            <div class="tool-cluster">
+                <span class="subbar-label">陣形:</span>
+                <button id="btn-tb-def-side" class="tb-mini-btn" title="陣形セット対象チーム切替">守備: 相手(赤)</button>
+                <button class="tb-preset-btn" data-formation="6-0">6:0 DF</button>
+                <button class="tb-preset-btn" data-formation="5-1">5:1 DF</button>
+                <button class="tb-preset-btn" data-formation="3-2-1">3:2:1 DF</button>
+                <button class="tb-preset-btn" data-formation="4-2">4:2 DF</button>
+                <button id="btn-tb-reset-pos" class="tb-mini-btn">初期配置</button>
+            </div>
+
+            <div class="tool-cluster anim-cluster">
+                <span class="subbar-label">コマ送り:</span>
+                <button id="btn-kf-add" class="tb-mini-btn green">＋コマ追加</button>
+                <button id="btn-kf-play" class="tb-mini-btn amber">▶ 再生</button>
+                <label class="toggle-check" style="font-size:11px;">
+                    <input type="checkbox" id="chk-kf-loop" checked>
+                    <span>ループ</span>
+                </label>
+                <div id="kf-list-wrap" class="kf-list-wrap"></div>
+                <button id="btn-kf-clear" class="tb-mini-btn danger">コマ消去</button>
+            </div>
+        </div>
+
+        <!-- メイン作戦盤キャンバス -->
+        <div class="panel tactics-board-card">
+            <div class="tactics-canvas-wrap">
+                <canvas id="tactics-canvas"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================
+         タブ4：名簿・CSV出力・データ管理
+    ========================================== -->
     <section id="view-roster" class="roster-workspace" style="display: none;">
         <div class="roster-grid-layout">
-            <!-- 左カード：試合情報＆CSV出力＆リセット -->
             <div class="panel roster-side-card">
                 <div class="card-title-row">
                     <h2>試合情報・データ出力</h2>
@@ -162,7 +314,6 @@
                 </div>
             </div>
 
-            <!-- 右カード：選手名簿登録 -->
             <div class="panel roster-main-card">
                 <div class="card-title-row">
                     <h2>選手名簿登録（1〜18番）</h2>
@@ -171,7 +322,7 @@
                         <button class="roster-team-btn opp" data-roster-team="opp">相手チーム名簿</button>
                     </div>
                 </div>
-                <p class="helper-note" style="margin-top: 0;">登録した選手名は「試合入力」の背番号ボタンに自動反映され、Tactical-Boardとも共有されます。</p>
+                <p class="helper-note" style="margin-top: 0;">登録した選手名は「試合入力」「分析マップ」「作戦盤」のすべてに自動反映されます。</p>
 
                 <div class="roster-table-wrap">
                     <table class="roster-table">
@@ -189,12 +340,11 @@
         </div>
     </section>
 
-   <script>
+    <script>
         (function() {
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
             }
-
             const v = Date.now();
             const cssLink = document.getElementById('dynamic-css');
             if (cssLink) cssLink.href = 'style.css?v=' + v;
