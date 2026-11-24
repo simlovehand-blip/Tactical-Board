@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tactical-Board STAT (Step 1)</title>
+    <link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+    <!-- 上部ヘッダー（タブ枠・タイマー・スコア） -->
+    <header class="top-header">
+        <div class="brand-area">
+            <span class="brand-title">Tactical-Board</span>
+            <span class="brand-badge">STAT v1</span>
+        </div>
+
+        <nav class="mode-tabs" aria-label="画面切替">
+            <button class="tab-btn active" data-tab="input">試合入力</button>
+            <button class="tab-btn" data-tab="map" disabled title="ステップ2・3で実装予定">分析マップ</button>
+            <button class="tab-btn" data-tab="tactics" disabled title="ステップ3で実装予定">作戦盤</button>
+            <button class="tab-btn" data-tab="roster" disabled title="名簿・CSV出力">名簿・出力</button>
+        </nav>
+
+        <div class="hud-area">
+            <div class="timer-box">
+                <span id="timer-display" class="timer-text">00:00</span>
+                <button id="btn-timer-toggle" class="hud-mini-btn" title="タイマー開始/一時停止">▶</button>
+                <button id="btn-timer-reset" class="hud-mini-btn" title="タイマーリセット">↺</button>
+            </div>
+            <div class="score-box">
+                <span class="score-team own">自</span>
+                <span id="score-own" class="score-num">0</span>
+                <span class="score-sep">-</span>
+                <span id="score-opp" class="score-num">0</span>
+                <span class="score-team opp">相</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- メイン3分割ワークスペース -->
+    <main class="workspace">
+        <!-- 左パネル：チーム切替・GK・背番号 -->
+        <section class="panel player-panel">
+            <div class="team-switch">
+                <button class="team-btn active own" data-team="own">自チーム</button>
+                <button class="team-btn opp" data-team="opp">相手チーム</button>
+            </div>
+
+            <div class="player-sub-row">
+                <button id="btn-select-gk" class="gk-btn">GK</button>
+                <span id="selected-player-badge" class="selected-badge">選手: #1</span>
+            </div>
+
+            <div id="jersey-grid" class="jersey-grid" aria-label="背番号選択"></div>
+        </section>
+
+        <!-- 中央パネル：ゴール9分割＆パターンA 6m〜9m実測コート図 -->
+        <section class="panel center-panel">
+            <!-- 上段：ゴール9分割＆枠外・ブロック -->
+            <div class="goal-section">
+                <div class="goal-outer">
+                    <div class="goal-post-left"></div>
+                    <div class="goal-crossbar"></div>
+                    <div class="goal-post-right"></div>
+                    <div id="goal-grid" class="goal-grid" aria-label="ゴール9分割"></div>
+                </div>
+                <div class="goal-sub-actions">
+                    <button class="sub-chip-btn" data-special-course="post">ポスト・バー</button>
+                    <button class="sub-chip-btn" data-special-course="block">DFブロック</button>
+                    <button class="sub-chip-btn clear-chip" id="btn-clear-selection">選択クリア</button>
+                </div>
+            </div>
+
+            <!-- 下段：6m〜9m実測コート図（パターンA：LW・RWサイド重視） -->
+            <div class="court-section">
+                <div class="court-telemetry">
+                    <span id="telemetry-zone" class="telemetry-pill">エリア: 未選択</span>
+                    <span id="telemetry-angle" class="telemetry-pill">角度: --°</span>
+                    <span id="telemetry-dist" class="telemetry-pill">距離: --.-m</span>
+                </div>
+
+                <div class="court-canvas-wrap">
+                    <canvas id="shot-court-canvas"></canvas>
+                </div>
+
+                <div class="court-quick-row">
+                    <button class="quick-zone-btn" data-quick-zone="7m">7mスロー</button>
+                    <button class="quick-zone-btn" data-quick-zone="fastbreak">速攻 (FB)</button>
+                    <button class="quick-zone-btn" data-quick-zone="empty">エンプティ</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右パネル：結果確定＆直近プレイログ -->
+        <section class="panel action-panel">
+            <div class="result-grid">
+                <button class="result-btn goal" data-result="goal">得点</button>
+                <button class="result-btn save" data-result="save">GKセーブ</button>
+                <button class="result-btn miss" data-result="miss">枠外ミス</button>
+                <button class="result-btn turnover" data-result="turnover">ターンオーバー</button>
+                <button class="result-btn two-min" data-result="2min">2分退場</button>
+                <button class="result-btn warning" data-result="warning">警告</button>
+            </div>
+
+            <div class="log-box">
+                <div class="log-header">
+                    <span>最近のプレイ</span>
+                    <button id="btn-undo" class="undo-btn">一つ戻る</button>
+                </div>
+                <ul id="play-log-list" class="play-log-list">
+                    <li class="log-empty">まだ記録がありません</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js?v=1"></script>
+</body>
+</html>
