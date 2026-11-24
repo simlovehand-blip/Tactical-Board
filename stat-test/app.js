@@ -1,37 +1,25 @@
 function initStatApp() {
-    // ==========================================
-    // 共通ストレージ定数（ステップ3で作戦盤と共有）
-    // ==========================================
     const STORAGE_KEY = 'TB_STAT_SHARED_V1';
     const MAX_JERSEY_NUM = 18;
+    const COURT_WIDTH_M = 20.0;
+    const MAX_VIEW_METERS_Y = 11.5;
+
+    // コーナー境界定数（ステップ2で確定した比率）
+    const WING_MAX_Y = 6.5;
+    const WING_TOP_X = 3.5;
+    const WING_BOT_X = 2.0;
+    const CB_HALF_WIDTH = 3.0;
 
     // ==========================================
-    // 要素取得
+    // 共通要素取得
     // ==========================================
     const tabBtns = document.querySelectorAll('.tab-btn');
-    const viewInput = document.getElementById('view-input');
-    const viewRoster = document.getElementById('view-roster');
-
-    const jerseyGrid = document.getElementById('jersey-grid');
-    const btnSelectGk = document.getElementById('btn-select-gk');
-    const selectedPlayerBadge = document.getElementById('selected-player-badge');
-    const teamBtns = document.querySelectorAll('.team-btn');
-
-    const goalGrid = document.getElementById('goal-grid');
-    const specialCourseBtns = document.querySelectorAll('[data-special-course]');
-    const btnClearSelection = document.getElementById('btn-clear-selection');
-    const quickZoneBtns = document.querySelectorAll('[data-quick-zone]');
-
-    const shotCanvas = document.getElementById('shot-court-canvas');
-    const ctx = shotCanvas.getContext('2d');
-    const telemetryZone = document.getElementById('telemetry-zone');
-    const telemetryAngle = document.getElementById('telemetry-angle');
-    const telemetryDist = document.getElementById('telemetry-dist');
-
-    const resultBtns = document.querySelectorAll('.result-btn');
-    const playLogList = document.getElementById('play-log-list');
-    const logCountEl = document.getElementById('log-count');
-    const btnUndo = document.getElementById('btn-undo');
+    const views = {
+        input: document.getElementById('view-input'),
+        map: document.getElementById('view-map'),
+        tactics: document.getElementById('view-tactics'),
+        roster: document.getElementById('view-roster')
+    };
 
     const btnHalfToggle = document.getElementById('btn-half-toggle');
     const timerDisplay = document.getElementById('timer-display');
@@ -40,7 +28,60 @@ function initStatApp() {
     const scoreOwnEl = document.getElementById('score-own');
     const scoreOppEl = document.getElementById('score-opp');
 
-    // 名簿・出力タブ要素
+    // タブ1：試合入力
+    const jerseyGrid = document.getElementById('jersey-grid');
+    const btnSelectGk = document.getElementById('btn-select-gk');
+    const selectedPlayerBadge = document.getElementById('selected-player-badge');
+    const teamBtns = document.querySelectorAll('.team-btn');
+    const goalGrid = document.getElementById('goal-grid');
+    const specialCourseBtns = document.querySelectorAll('[data-special-course]');
+    const btnClearSelection = document.getElementById('btn-clear-selection');
+    const quickZoneBtns = document.querySelectorAll('[data-quick-zone]');
+    const shotCanvas = document.getElementById('shot-court-canvas');
+    const shotCtx = shotCanvas.getContext('2d');
+    const telemetryZone = document.getElementById('telemetry-zone');
+    const telemetryAngle = document.getElementById('telemetry-angle');
+    const telemetryDist = document.getElementById('telemetry-dist');
+    const resultBtns = document.querySelectorAll('.result-btn');
+    const playLogList = document.getElementById('play-log-list');
+    const logCountEl = document.getElementById('log-count');
+    const btnUndo = document.getElementById('btn-undo');
+
+    // タブ2：分析マップ
+    const mapTeamBtns = document.querySelectorAll('.map-team-btn');
+    const mapHalfFilter = document.getElementById('map-half-filter');
+    const mapPlayerFilter = document.getElementById('map-player-filter');
+    const mapShowLines = document.getElementById('map-show-lines');
+    const kpiShotsEl = document.getElementById('kpi-shots');
+    const kpiGoalsEl = document.getElementById('kpi-goals');
+    const kpiRatePill = document.getElementById('kpi-rate-pill');
+    const analysisCanvas = document.getElementById('analysis-court-canvas');
+    const analysisCtx = analysisCanvas.getContext('2d');
+    const mapGoalTitle = document.getElementById('map-goal-title');
+    const mapSpecialCounts = document.getElementById('map-special-counts');
+    const analysisGoalGrid = document.getElementById('analysis-goal-grid');
+    const thRateCol = document.getElementById('th-rate-col');
+    const analysisAreaTbody = document.getElementById('analysis-area-tbody');
+
+    // タブ3：作戦盤
+    const tbToolBtns = document.querySelectorAll('.tb-tool-btn');
+    const colorSwatches = document.querySelectorAll('.color-swatch');
+    const btnTbUndoLine = document.getElementById('btn-tb-undo-line');
+    const btnTbClearLines = document.getElementById('btn-tb-clear-lines');
+    const btnTbCourtMode = document.getElementById('btn-tb-court-mode');
+    const tbStatOverlay = document.getElementById('tb-stat-overlay');
+    const btnTbDefSide = document.getElementById('btn-tb-def-side');
+    const tbPresetBtns = document.querySelectorAll('.tb-preset-btn');
+    const btnTbResetPos = document.getElementById('btn-tb-reset-pos');
+    const btnKfAdd = document.getElementById('btn-kf-add');
+    const btnKfPlay = document.getElementById('btn-kf-play');
+    const chkKfLoop = document.getElementById('chk-kf-loop');
+    const kfListWrap = document.getElementById('kf-list-wrap');
+    const btnKfClear = document.getElementById('btn-kf-clear');
+    const tacticsCanvas = document.getElementById('tactics-canvas');
+    const tbCtx = tacticsCanvas.getContext('2d');
+
+    // タブ4：名簿・出力
     const matchTitleInput = document.getElementById('match-title-input');
     const matchOpponentInput = document.getElementById('match-opponent-input');
     const summaryTotalLogs = document.getElementById('summary-total-logs');
@@ -52,88 +93,123 @@ function initStatApp() {
     const autosaveStatus = document.getElementById('autosave-status');
 
     // ==========================================
-    // 初期データ構造＆ストレージ読み書き
+    // 永続化データ読み書き（localStorage）
     // ==========================================
     function createDefaultRoster() {
         const obj = {};
         for (let i = 1; i <= MAX_JERSEY_NUM; i++) {
-            obj[String(i)] = { name: '', pos: i === 1 || i === 12 ? 'GK' : '' };
+            obj[String(i)] = { name: '', pos: (i === 1 || i === 12) ? 'GK' : '' };
         }
         return obj;
+    }
+
+    function createDefaultMarkers() {
+        // 半面(20m×20m)基準の正規化座標 (x:0..1, y:0..1)
+        return [
+            // 自チーム（青：オフェンス初期配置）
+            { id: 'own_gk', team: 'own', num: '1', isGk: true, x: 0.50, y: 0.96 },
+            { id: 'own_2',  team: 'own', num: '2', isGk: false, x: 0.08, y: 0.22 },
+            { id: 'own_3',  team: 'own', num: '3', isGk: false, x: 0.24, y: 0.56 },
+            { id: 'own_4',  team: 'own', num: '4', isGk: false, x: 0.50, y: 0.62 },
+            { id: 'own_5',  team: 'own', num: '5', isGk: false, x: 0.76, y: 0.56 },
+            { id: 'own_6',  team: 'own', num: '6', isGk: false, x: 0.92, y: 0.22 },
+            { id: 'own_7',  team: 'own', num: '7', isGk: false, x: 0.58, y: 0.34 },
+            // 相手チーム（赤：6:0 DF初期配置）
+            { id: 'opp_gk', team: 'opp', num: '1', isGk: true, x: 0.50, y: 0.03 },
+            { id: 'opp_2',  team: 'opp', num: '2', isGk: false, x: 0.16, y: 0.24 },
+            { id: 'opp_3',  team: 'opp', num: '3', isGk: false, x: 0.30, y: 0.33 },
+            { id: 'opp_4',  team: 'opp', num: '4', isGk: false, x: 0.43, y: 0.35 },
+            { id: 'opp_5',  team: 'opp', num: '5', isGk: false, x: 0.57, y: 0.35 },
+            { id: 'opp_6',  team: 'opp', num: '6', isGk: false, x: 0.70, y: 0.33 },
+            { id: 'opp_7',  team: 'opp', num: '7', isGk: false, x: 0.84, y: 0.24 },
+            // ボール
+            { id: 'ball',   team: 'ball', num: '', isGk: false, x: 0.50, y: 0.58 }
+        ];
     }
 
     function loadSavedData() {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return null;
-            return JSON.parse(raw);
+            return raw ? JSON.parse(raw) : null;
         } catch (e) {
-            console.warn('保存データの読み込みに失敗:', e);
             return null;
         }
     }
 
     const saved = loadSavedData();
 
-    let matchInfo = (saved && saved.matchInfo) ? saved.matchInfo : {
-        title: '',
-        opponent: '',
-        half: '前半'
-    };
-
+    let matchInfo = (saved && saved.matchInfo) ? saved.matchInfo : { title: '', opponent: '', half: '前半' };
     let roster = (saved && saved.roster) ? {
         own: { ...createDefaultRoster(), ...(saved.roster.own || {}) },
         opp: { ...createDefaultRoster(), ...(saved.roster.opp || {}) }
-    } : {
-        own: createDefaultRoster(),
-        opp: createDefaultRoster()
-    };
+    } : { own: createDefaultRoster(), opp: createDefaultRoster() };
 
     let historyLogs = (saved && saved.state && Array.isArray(saved.state.historyLogs)) ? saved.state.historyLogs : [];
     let scoreOwn = (saved && saved.state && typeof saved.state.scoreOwn === 'number') ? saved.state.scoreOwn : 0;
     let scoreOpp = (saved && saved.state && typeof saved.state.scoreOpp === 'number') ? saved.state.scoreOpp : 0;
     let elapsedSec = (saved && saved.state && typeof saved.state.elapsedSec === 'number') ? saved.state.elapsedSec : 0;
 
+    // 作戦盤の保存状態
+    let tbMarkers = (saved && saved.tactics && Array.isArray(saved.tactics.markers)) ? saved.tactics.markers : createDefaultMarkers();
+    let tbStrokes = (saved && saved.tactics && Array.isArray(saved.tactics.strokes)) ? saved.tactics.strokes : [];
+    let tbKeyframes = (saved && saved.tactics && Array.isArray(saved.tactics.keyframes)) ? saved.tactics.keyframes : [];
+
     let saveFlashTimer = null;
     function saveAllData() {
         try {
             const payload = {
-                version: 1,
+                version: 3,
                 updatedAt: new Date().toISOString(),
                 matchInfo,
                 roster,
-                state: {
-                    scoreOwn,
-                    scoreOpp,
-                    elapsedSec,
-                    historyLogs
-                }
+                state: { scoreOwn, scoreOpp, elapsedSec, historyLogs },
+                tactics: { markers: tbMarkers, strokes: tbStrokes, keyframes: tbKeyframes }
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
             if (autosaveStatus) {
                 autosaveStatus.textContent = '保存済み ✓';
                 clearTimeout(saveFlashTimer);
-                saveFlashTimer = setTimeout(() => {
-                    autosaveStatus.textContent = '自動保存ON';
-                }, 1200);
+                saveFlashTimer = setTimeout(() => { autosaveStatus.textContent = '自動保存ON'; }, 1200);
             }
-        } catch (e) {
-            console.warn('データの自動保存に失敗:', e);
-        }
+        } catch (e) {}
     }
 
     // ==========================================
-    // 操作状態
+    // 共通ヘルパー＆タブ切替
     // ==========================================
-    let currentTeam = 'own';       // 'own' | 'opp'
-    let selectedPlayer = '1';      // '1'..'18' | 'GK'
-    let selectedGoalCourse = null; // 'UL','UC','UR','ML','MC','MR','DL','DC','DR','post','block'
-    let selectedQuickZone = null;  // '7m' | 'fastbreak' | 'empty'
-    let shotPoint = null;          // { x, y, zone, lane, depth, angleDeg, acuteAngleDeg, distM }
-    let activeRosterTeam = 'own';
+    let activeTab = 'input';
 
-    let timerInterval = null;
-    let isTimerRunning = false;
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab;
+            activeTab = target;
+            tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+
+            Object.keys(views).forEach(k => {
+                views[k].style.display = (k === target) ? '' : 'none';
+            });
+
+            if (target === 'input') {
+                resizeShotCanvas();
+            } else if (target === 'map') {
+                refreshMapPlayerFilter();
+                renderAnalysisView();
+                resizeAnalysisCanvas();
+            } else if (target === 'tactics') {
+                renderKeyframeChips();
+                resizeTacticsCanvas();
+            } else if (target === 'roster') {
+                updateSummaryCardUI();
+                renderRosterTable();
+            }
+        });
+    });
+
+    function getPlayerDisplayName(team, playerKey) {
+        if (playerKey === 'GK') return 'GK';
+        const entry = roster[team] && roster[team][playerKey];
+        return entry && entry.name ? entry.name.trim() : '';
+    }
 
     const GOAL_ZONES = [
         { id: 'UL', label: '左上' }, { id: 'UC', label: '中上' }, { id: 'UR', label: '右上' },
@@ -142,35 +218,15 @@ function initStatApp() {
     ];
 
     // ==========================================
-    // 上部タブ切替（試合入力 ⇔ 名簿・出力）
+    // タブ1：試合入力ロジック
     // ==========================================
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.disabled) return;
-            const target = btn.dataset.tab;
-            tabBtns.forEach(b => b.classList.toggle('active', b === btn));
-
-            if (target === 'input') {
-                viewInput.style.display = '';
-                viewRoster.style.display = 'none';
-                resizeCourtCanvas();
-            } else if (target === 'roster') {
-                viewInput.style.display = 'none';
-                viewRoster.style.display = 'block';
-                updateSummaryCardUI();
-                renderRosterTable();
-            }
-        });
-    });
-
-    // ==========================================
-    // 背番号グリッド初期化（1〜18・名簿名表示対応）
-    // ==========================================
-    function getPlayerDisplayName(team, playerKey) {
-        if (playerKey === 'GK') return 'GK';
-        const entry = roster[team] && roster[team][playerKey];
-        return entry && entry.name ? entry.name.trim() : '';
-    }
+    let currentTeam = 'own';
+    let selectedPlayer = '1';
+    let selectedGoalCourse = null;
+    let selectedQuickZone = null;
+    let shotPoint = null;
+    let timerInterval = null;
+    let isTimerRunning = false;
 
     function buildJerseyGrid() {
         jerseyGrid.innerHTML = '';
@@ -192,7 +248,6 @@ function initStatApp() {
 
             btn.appendChild(numSpan);
             btn.appendChild(nameSpan);
-
             btn.addEventListener('click', () => {
                 selectedPlayer = numStr;
                 updatePlayerSelectionUI();
@@ -218,9 +273,7 @@ function initStatApp() {
             selectedPlayerBadge.textContent = `${teamLabel}: GK`;
         } else {
             const pName = getPlayerDisplayName(currentTeam, selectedPlayer);
-            selectedPlayerBadge.textContent = pName
-                ? `${teamLabel}: #${selectedPlayer} ${pName}`
-                : `${teamLabel}: #${selectedPlayer}`;
+            selectedPlayerBadge.textContent = pName ? `${teamLabel}: #${selectedPlayer} ${pName}` : `${teamLabel}: #${selectedPlayer}`;
         }
     }
 
@@ -237,9 +290,6 @@ function initStatApp() {
         });
     });
 
-    // ==========================================
-    // ゴール9分割＆特殊コース初期化
-    // ==========================================
     function buildGoalGrid() {
         const outer = document.querySelector('.goal-outer');
         const oldBody = outer.querySelector('.goal-frame-body');
@@ -290,35 +340,12 @@ function initStatApp() {
         quickZoneBtns.forEach(b => b.classList.remove('active'));
         updateGoalSelectionUI();
         updateTelemetryUI();
-        renderCourt();
+        renderShotCourt();
     });
 
-    // ==========================================
-    // 6m〜9m実測コート図（角度計算修正済み）
-    // ==========================================
-    const MAX_VIEW_METERS_Y = 11.5;
-    const COURT_WIDTH_M = 20.0;
-
-    const WING_MAX_Y = 6.5;
-    const WING_TOP_X = 3.5;
-    const WING_BOT_X = 2.0;
-    const CB_HALF_WIDTH = 3.0;
-
-    function resizeCourtCanvas() {
-        const wrap = shotCanvas.parentElement;
-        const rect = wrap.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const w = Math.max(240, Math.floor(rect.width));
-        const h = Math.max(140, Math.floor(rect.height));
-        shotCanvas.width = Math.floor(w * dpr);
-        shotCanvas.height = Math.floor(h * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        renderCourt();
-    }
-
-    function getCourtMetrics() {
-        const wrap = shotCanvas.parentElement;
+    // 6m〜9m実測コート共通描画関数（試合入力＆分析マップで共用）
+    function getZoomCourtMetrics(canvasEl) {
+        const wrap = canvasEl.parentElement;
         const rect = wrap.getBoundingClientRect();
         const padX = 10;
         const padY = 8;
@@ -340,26 +367,148 @@ function initStatApp() {
         };
     }
 
-    function normToCanvas(m, nx, ny) {
+    function normToZoomCanvas(m, nx, ny) {
         return {
             cx: m.x0 + nx * m.w,
             cy: m.y0 + (ny * 20.0) * m.pxPerM
         };
     }
 
-    function canvasToNorm(m, cx, cy) {
+    function zoomCanvasToNorm(m, cx, cy) {
         const nx = Math.max(0, Math.min(1, (cx - m.x0) / m.w));
         const yMeters = Math.max(0.2, Math.min(MAX_VIEW_METERS_Y, (cy - m.y0) / m.pxPerM));
         return { nx, ny: yMeters / 20.0 };
     }
 
+    function drawZoomBaseCourt(targetCtx, m) {
+        targetCtx.clearRect(0, 0, m.viewW, m.viewH);
+        targetCtx.save();
+        targetCtx.fillStyle = '#0c182c';
+        targetCtx.fillRect(m.x0, m.y0, m.w, m.h);
+
+        targetCtx.beginPath();
+        targetCtx.rect(m.x0, m.y0, m.w, m.h);
+        targetCtx.clip();
+
+        const pxPerM = m.pxPerM;
+        const leftPost = normToZoomCanvas(m, 0.5 - 1.5 / 20, 0);
+        const rightPost = normToZoomCanvas(m, 0.5 + 1.5 / 20, 0);
+
+        // LW / RW コーナー色分け
+        targetCtx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+        targetCtx.beginPath();
+        targetCtx.moveTo(m.x0, m.y0);
+        targetCtx.lineTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
+        targetCtx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.closePath();
+        targetCtx.fill();
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(m.x0 + m.w, m.y0);
+        targetCtx.lineTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
+        targetCtx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.closePath();
+        targetCtx.fill();
+
+        // 6mライン
+        targetCtx.beginPath();
+        targetCtx.arc(leftPost.cx, leftPost.cy, 6 * pxPerM, Math.PI, Math.PI / 2, true);
+        targetCtx.lineTo(rightPost.cx, leftPost.cy + 6 * pxPerM);
+        targetCtx.arc(rightPost.cx, rightPost.cy, 6 * pxPerM, Math.PI / 2, 0, true);
+        targetCtx.closePath();
+        targetCtx.fillStyle = 'rgba(16, 185, 129, 0.11)';
+        targetCtx.fill();
+        targetCtx.lineWidth = 2.2;
+        targetCtx.strokeStyle = '#34d399';
+        targetCtx.stroke();
+
+        // 9mライン
+        targetCtx.beginPath();
+        targetCtx.setLineDash([7, 6]);
+        targetCtx.arc(leftPost.cx, leftPost.cy, 9 * pxPerM, Math.PI, Math.PI / 2, true);
+        targetCtx.lineTo(rightPost.cx, leftPost.cy + 9 * pxPerM);
+        targetCtx.arc(rightPost.cx, rightPost.cy, 9 * pxPerM, Math.PI / 2, 0, true);
+        targetCtx.lineWidth = 1.8;
+        targetCtx.strokeStyle = 'rgba(148, 163, 184, 0.72)';
+        targetCtx.stroke();
+        targetCtx.setLineDash([]);
+
+        // 7mライン
+        const p7L = normToZoomCanvas(m, 0.5 - 0.5 / 20, 7 / 20);
+        const p7R = normToZoomCanvas(m, 0.5 + 0.5 / 20, 7 / 20);
+        targetCtx.beginPath();
+        targetCtx.moveTo(p7L.cx, p7L.cy);
+        targetCtx.lineTo(p7R.cx, p7R.cy);
+        targetCtx.lineWidth = 2;
+        targetCtx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
+        targetCtx.stroke();
+
+        // 境界ガイド
+        targetCtx.save();
+        targetCtx.setLineDash([4, 5]);
+        targetCtx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+        targetCtx.lineWidth = 1.2;
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
+        targetCtx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.stroke();
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
+        targetCtx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
+        targetCtx.stroke();
+
+        const lbcbX = m.x0 + (10 - CB_HALF_WIDTH) * pxPerM;
+        const cbrbX = m.x0 + (10 + CB_HALF_WIDTH) * pxPerM;
+        targetCtx.beginPath();
+        targetCtx.moveTo(lbcbX, m.y0 + 6 * pxPerM);
+        targetCtx.lineTo(lbcbX, m.y0 + m.h);
+        targetCtx.moveTo(cbrbX, m.y0 + 6 * pxPerM);
+        targetCtx.lineTo(cbrbX, m.y0 + m.h);
+        targetCtx.stroke();
+        targetCtx.restore();
+
+        // レーンラベル
+        targetCtx.fillStyle = 'rgba(226, 232, 240, 0.75)';
+        targetCtx.font = 'bold 12px sans-serif';
+        targetCtx.textAlign = 'center';
+        targetCtx.fillText('LW', m.x0 + 1.3 * pxPerM, m.y0 + 3.2 * pxPerM);
+        targetCtx.fillText('RW', m.x0 + (COURT_WIDTH_M - 1.3) * pxPerM, m.y0 + 3.2 * pxPerM);
+        targetCtx.fillText('LB', m.x0 + 3.8 * pxPerM, m.y0 + 9.8 * pxPerM);
+        targetCtx.fillText('CB', m.x0 + 10.0 * pxPerM, m.y0 + 9.8 * pxPerM);
+        targetCtx.fillText('RB', m.x0 + 16.2 * pxPerM, m.y0 + 9.8 * pxPerM);
+
+        // 距離ラベル
+        targetCtx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+        targetCtx.font = 'bold 10px sans-serif';
+        targetCtx.textAlign = 'right';
+        targetCtx.fillText('6m', m.x0 + m.w - 6, m.y0 + 6 * pxPerM - 4);
+        targetCtx.fillText('9m', m.x0 + m.w - 6, m.y0 + 9 * pxPerM - 4);
+
+        // ゴールライン＆ゴール枠
+        targetCtx.beginPath();
+        targetCtx.moveTo(m.x0, m.y0);
+        targetCtx.lineTo(m.x0 + m.w, m.y0);
+        targetCtx.lineWidth = 3;
+        targetCtx.strokeStyle = '#6ee7b7';
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#ef4444';
+        targetCtx.fillRect(leftPost.cx, m.y0, rightPost.cx - leftPost.cx, 5);
+        targetCtx.restore();
+    }
+
     function classifyShotArea(nx, ny) {
-        const xMeters = nx * COURT_WIDTH_M; // 0..20m
-        const yMeters = ny * 20.0;           // 0..11.5m
-        const dxCenter = xMeters - 10.0;     // ゴール中心からの左右オフセット(-10..+10m)
+        const xMeters = nx * COURT_WIDTH_M;
+        const yMeters = ny * 20.0;
+        const dxCenter = xMeters - 10.0;
         const distM = Math.hypot(dxCenter, yMeters);
 
-        // ゴール中心(10, 0)を原点とし、左サイド=0°、正面=90°、右サイド=180°
         const radFromGoalCenter = Math.atan2(yMeters, -dxCenter);
         const angleDeg = Math.round((radFromGoalCenter * 180) / Math.PI);
         const acuteAngleDeg = Math.min(angleDeg, 180 - angleDeg);
@@ -380,11 +529,8 @@ function initStatApp() {
         }
 
         let depth = '6-9m';
-        if (yMeters <= 6.2) {
-            depth = '6m際';
-        } else if (yMeters > 9.0) {
-            depth = '9m外';
-        }
+        if (yMeters <= 6.2) depth = '6m際';
+        else if (yMeters > 9.0) depth = '9m外';
 
         return {
             zone: `${lane} ${depth}`,
@@ -417,178 +563,67 @@ function initStatApp() {
         telemetryDist.textContent = `距離: ${shotPoint.distM.toFixed(1)}m`;
     }
 
-    function renderCourt() {
-        const m = getCourtMetrics();
-        ctx.clearRect(0, 0, m.viewW, m.viewH);
+    function resizeShotCanvas() {
+        const wrap = shotCanvas.parentElement;
+        const rect = wrap.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        shotCanvas.width = Math.floor(rect.width * dpr);
+        shotCanvas.height = Math.floor(rect.height * dpr);
+        shotCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        renderShotCourt();
+    }
 
-        ctx.save();
-        ctx.fillStyle = '#0c182c';
-        ctx.fillRect(m.x0, m.y0, m.w, m.h);
+    function renderShotCourt() {
+        const m = getZoomCourtMetrics(shotCanvas);
+        drawZoomBaseCourt(shotCtx, m);
 
-        ctx.beginPath();
-        ctx.rect(m.x0, m.y0, m.w, m.h);
-        ctx.clip();
-
-        const pxPerM = m.pxPerM;
-        const goalCenter = normToCanvas(m, 0.5, 0);
-        const leftPost = normToCanvas(m, 0.5 - 1.5 / 20, 0);
-        const rightPost = normToCanvas(m, 0.5 + 1.5 / 20, 0);
-
-        // LW / RW コーナーゾーン色分け
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
-        ctx.beginPath();
-        ctx.moveTo(m.x0, m.y0);
-        ctx.lineTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
-        ctx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.moveTo(m.x0 + m.w, m.y0);
-        ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
-        ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.closePath();
-        ctx.fill();
-
-        // 6mゴールエリア
-        ctx.beginPath();
-        ctx.arc(leftPost.cx, leftPost.cy, 6 * pxPerM, Math.PI, Math.PI / 2, true);
-        ctx.lineTo(rightPost.cx, leftPost.cy + 6 * pxPerM);
-        ctx.arc(rightPost.cx, rightPost.cy, 6 * pxPerM, Math.PI / 2, 0, true);
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(16, 185, 129, 0.11)';
-        ctx.fill();
-        ctx.lineWidth = 2.2;
-        ctx.strokeStyle = '#34d399';
-        ctx.stroke();
-
-        // 9mフリースローライン
-        ctx.beginPath();
-        ctx.setLineDash([7, 6]);
-        ctx.arc(leftPost.cx, leftPost.cy, 9 * pxPerM, Math.PI, Math.PI / 2, true);
-        ctx.lineTo(rightPost.cx, leftPost.cy + 9 * pxPerM);
-        ctx.arc(rightPost.cx, rightPost.cy, 9 * pxPerM, Math.PI / 2, 0, true);
-        ctx.lineWidth = 1.8;
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.72)';
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // 7mライン
-        const p7L = normToCanvas(m, 0.5 - 0.5 / 20, 7 / 20);
-        const p7R = normToCanvas(m, 0.5 + 0.5 / 20, 7 / 20);
-        ctx.beginPath();
-        ctx.moveTo(p7L.cx, p7L.cy);
-        ctx.lineTo(p7R.cx, p7R.cy);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(248, 250, 252, 0.75)';
-        ctx.stroke();
-
-        // 境界ガイド線
-        ctx.save();
-        ctx.setLineDash([4, 5]);
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
-        ctx.lineWidth = 1.2;
-
-        ctx.beginPath();
-        ctx.moveTo(m.x0 + WING_TOP_X * pxPerM, m.y0);
-        ctx.lineTo(m.x0 + WING_BOT_X * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.lineTo(m.x0, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(m.x0 + (COURT_WIDTH_M - WING_TOP_X) * pxPerM, m.y0);
-        ctx.lineTo(m.x0 + (COURT_WIDTH_M - WING_BOT_X) * pxPerM, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.lineTo(m.x0 + m.w, m.y0 + WING_MAX_Y * pxPerM);
-        ctx.stroke();
-
-        const lbcbX = m.x0 + (10 - CB_HALF_WIDTH) * pxPerM;
-        const cbrbX = m.x0 + (10 + CB_HALF_WIDTH) * pxPerM;
-        ctx.beginPath();
-        ctx.moveTo(lbcbX, m.y0 + 6 * pxPerM);
-        ctx.lineTo(lbcbX, m.y0 + m.h);
-        ctx.moveTo(cbrbX, m.y0 + 6 * pxPerM);
-        ctx.lineTo(cbrbX, m.y0 + m.h);
-        ctx.stroke();
-        ctx.restore();
-
-        // レーンラベル
-        ctx.fillStyle = 'rgba(226, 232, 240, 0.78)';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('LW', m.x0 + 1.3 * pxPerM, m.y0 + 3.2 * pxPerM);
-        ctx.fillText('RW', m.x0 + (COURT_WIDTH_M - 1.3) * pxPerM, m.y0 + 3.2 * pxPerM);
-        ctx.fillText('LB', m.x0 + 3.8 * pxPerM, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('CB', m.x0 + 10.0 * pxPerM, m.y0 + 9.8 * pxPerM);
-        ctx.fillText('RB', m.x0 + 16.2 * pxPerM, m.y0 + 9.8 * pxPerM);
-
-        // 距離ラベル
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText('6m', m.x0 + m.w - 6, m.y0 + 6 * pxPerM - 4);
-        ctx.fillText('9m', m.x0 + m.w - 6, m.y0 + 9 * pxPerM - 4);
+        const goalCenter = normToZoomCanvas(m, 0.5, 0);
 
         // 過去プロット
         historyLogs.forEach(item => {
             if (!item.point) return;
-            const pt = normToCanvas(m, item.point.x, item.point.y);
-            ctx.beginPath();
-            ctx.arc(pt.cx, pt.cy, 4.5, 0, Math.PI * 2);
+            const pt = normToZoomCanvas(m, item.point.x, item.point.y);
+            shotCtx.beginPath();
+            shotCtx.arc(pt.cx, pt.cy, 4.5, 0, Math.PI * 2);
             if (item.result === 'goal') {
-                ctx.fillStyle = item.team === 'own' ? 'rgba(96, 165, 250, 0.65)' : 'rgba(251, 113, 133, 0.65)';
+                shotCtx.fillStyle = item.team === 'own' ? 'rgba(96, 165, 250, 0.65)' : 'rgba(251, 113, 133, 0.65)';
             } else if (item.result === 'save') {
-                ctx.fillStyle = 'rgba(251, 191, 36, 0.65)';
+                shotCtx.fillStyle = 'rgba(251, 191, 36, 0.65)';
             } else {
-                ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+                shotCtx.fillStyle = 'rgba(148, 163, 184, 0.45)';
             }
-            ctx.fill();
+            shotCtx.fill();
         });
 
-        // 選択中の打点とゴール中心への角度線
+        // 選択中の打点と角度ガイド線
         if (shotPoint && !selectedQuickZone) {
-            const activePt = normToCanvas(m, shotPoint.x, shotPoint.y);
+            const activePt = normToZoomCanvas(m, shotPoint.x, shotPoint.y);
 
-            ctx.save();
-            ctx.setLineDash([5, 5]);
-            ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
-            ctx.lineWidth = 1.6;
-            ctx.beginPath();
-            ctx.moveTo(activePt.cx, activePt.cy);
-            ctx.lineTo(goalCenter.cx, goalCenter.cy);
-            ctx.stroke();
-            ctx.restore();
+            shotCtx.save();
+            shotCtx.setLineDash([5, 5]);
+            shotCtx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
+            shotCtx.lineWidth = 1.6;
+            shotCtx.beginPath();
+            shotCtx.moveTo(activePt.cx, activePt.cy);
+            shotCtx.lineTo(goalCenter.cx, goalCenter.cy);
+            shotCtx.stroke();
+            shotCtx.restore();
 
-            ctx.beginPath();
-            ctx.arc(activePt.cx, activePt.cy, 8, 0, Math.PI * 2);
-            ctx.fillStyle = currentTeam === 'own' ? '#3b82f6' : '#f43f5e';
-            ctx.fill();
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.stroke();
+            shotCtx.beginPath();
+            shotCtx.arc(activePt.cx, activePt.cy, 8, 0, Math.PI * 2);
+            shotCtx.fillStyle = currentTeam === 'own' ? '#3b82f6' : '#f43f5e';
+            shotCtx.fill();
+            shotCtx.lineWidth = 2.5;
+            shotCtx.strokeStyle = '#ffffff';
+            shotCtx.stroke();
         }
-
-        // 上端ゴールライン＆ゴール枠
-        ctx.beginPath();
-        ctx.moveTo(m.x0, m.y0);
-        ctx.lineTo(m.x0 + m.w, m.y0);
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#6ee7b7';
-        ctx.stroke();
-
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(leftPost.cx, m.y0, rightPost.cx - leftPost.cx, 5);
-
-        ctx.restore();
     }
 
     function handleCourtPointer(e) {
-        const m = getCourtMetrics();
+        const m = getZoomCourtMetrics(shotCanvas);
         const rect = shotCanvas.getBoundingClientRect();
-        const cx = e.clientX - rect.left;
-        const cy = e.clientY - rect.top;
-        const { nx, ny } = canvasToNorm(m, cx, cy);
+        const { nx, ny } = zoomCanvasToNorm(m, e.clientX - rect.left, e.clientY - rect.top);
         const info = classifyShotArea(nx, ny);
 
         selectedQuickZone = null;
@@ -606,7 +641,7 @@ function initStatApp() {
         };
 
         updateTelemetryUI();
-        renderCourt();
+        renderShotCourt();
     }
 
     shotCanvas.addEventListener('pointerdown', (e) => {
@@ -615,9 +650,7 @@ function initStatApp() {
     });
 
     shotCanvas.addEventListener('pointermove', (e) => {
-        if (shotCanvas.hasPointerCapture(e.pointerId)) {
-            handleCourtPointer(e);
-        }
+        if (shotCanvas.hasPointerCapture(e.pointerId)) handleCourtPointer(e);
     });
 
     quickZoneBtns.forEach(btn => {
@@ -632,13 +665,11 @@ function initStatApp() {
                 quickZoneBtns.forEach(b => b.classList.toggle('active', b === btn));
             }
             updateTelemetryUI();
-            renderCourt();
+            renderShotCourt();
         });
     });
 
-    // ==========================================
-    // 前後半・タイマー・スコア・記録処理
-    // ==========================================
+    // タイマー・前後半・記録
     function updateHalfUI() {
         btnHalfToggle.textContent = matchInfo.half;
         btnHalfToggle.classList.toggle('second', matchInfo.half === '後半');
@@ -695,12 +726,8 @@ function initStatApp() {
     }
 
     const RESULT_LABEL_MAP = {
-        goal: '得点',
-        save: 'GKセーブ',
-        miss: '枠外ミス',
-        turnover: 'ターンオーバー',
-        '2min': '2分退場',
-        warning: '警告'
+        goal: '得点', save: 'GKセーブ', miss: '枠外ミス',
+        turnover: 'ターンオーバー', '2min': '2分退場', warning: '警告'
     };
 
     function renderHistoryUI() {
@@ -743,6 +770,7 @@ function initStatApp() {
             const resultLabel = RESULT_LABEL_MAP[resultKey] || resultKey;
 
             let zoneLabel = '';
+            let quickType = selectedQuickZone || null;
             let angleDeg = null;
             let acuteAngleDeg = null;
             let distM = null;
@@ -760,13 +788,9 @@ function initStatApp() {
             let courseLabel = '';
             if (selectedGoalCourse) {
                 const foundGoal = GOAL_ZONES.find(g => g.id === selectedGoalCourse);
-                if (foundGoal) {
-                    courseLabel = foundGoal.label;
-                } else if (selectedGoalCourse === 'post') {
-                    courseLabel = 'ポスト・バー';
-                } else if (selectedGoalCourse === 'block') {
-                    courseLabel = 'DFブロック';
-                }
+                if (foundGoal) courseLabel = foundGoal.label;
+                else if (selectedGoalCourse === 'post') courseLabel = 'ポスト・バー';
+                else if (selectedGoalCourse === 'block') courseLabel = 'DFブロック';
             }
 
             if (resultKey === 'goal') {
@@ -785,16 +809,18 @@ function initStatApp() {
                 result: resultKey,
                 resultLabel,
                 zoneLabel,
+                quickType,
                 angleDeg,
                 acuteAngleDeg,
                 distM,
+                courseId: selectedGoalCourse || null,
                 courseLabel,
                 point: shotPoint ? { ...shotPoint } : null
             };
 
             historyLogs.push(entry);
             renderHistoryUI();
-            renderCourt();
+            renderShotCourt();
             saveAllData();
 
             selectedGoalCourse = null;
@@ -815,13 +841,837 @@ function initStatApp() {
             updateScoreUI();
         }
         renderHistoryUI();
-        renderCourt();
+        renderShotCourt();
         saveAllData();
     });
 
     // ==========================================
-    // 名簿・CSV出力・データ管理タブ処理
+    // タブ2：分析マップロジック
     // ==========================================
+    let mapTargetTeam = 'own'; // 'own' | 'opp'
+
+    function refreshMapPlayerFilter() {
+        const curVal = mapPlayerFilter.value;
+        mapPlayerFilter.innerHTML = '<option value="all">全選手</option>';
+        for (let i = 1; i <= MAX_JERSEY_NUM; i++) {
+            const numStr = String(i);
+            const pName = getPlayerDisplayName(mapTargetTeam, numStr);
+            const opt = document.createElement('option');
+            opt.value = numStr;
+            opt.textContent = pName ? `#${numStr} ${pName}` : `#${numStr}`;
+            mapPlayerFilter.appendChild(opt);
+        }
+        mapPlayerFilter.value = curVal || 'all';
+    }
+
+    function getFilteredShots() {
+        const halfVal = mapHalfFilter.value;
+        const playerVal = mapPlayerFilter.value;
+        const SHOT_RESULTS = ['goal', 'save', 'miss'];
+
+        return historyLogs.filter(item => {
+            if (item.team !== mapTargetTeam) return false;
+            if (!SHOT_RESULTS.includes(item.result)) return false;
+            if (halfVal !== 'all' && (item.half || '前半') !== halfVal) return false;
+            if (playerVal !== 'all' && item.player !== playerVal) return false;
+            return true;
+        });
+    }
+
+    mapTeamBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            mapTargetTeam = btn.dataset.mapTeam;
+            mapTeamBtns.forEach(b => b.classList.toggle('active', b === btn));
+            refreshMapPlayerFilter();
+            renderAnalysisView();
+        });
+    });
+
+    mapHalfFilter.addEventListener('change', renderAnalysisView);
+    mapPlayerFilter.addEventListener('change', renderAnalysisView);
+    mapShowLines.addEventListener('change', renderAnalysisCourt);
+
+    function resizeAnalysisCanvas() {
+        const wrap = analysisCanvas.parentElement;
+        const rect = wrap.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        analysisCanvas.width = Math.floor(rect.width * dpr);
+        analysisCanvas.height = Math.floor(rect.height * dpr);
+        analysisCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        renderAnalysisCourt();
+    }
+
+    function renderAnalysisCourt() {
+        const m = getZoomCourtMetrics(analysisCanvas);
+        drawZoomBaseCourt(analysisCtx, m);
+
+        const shots = getFilteredShots();
+        const goalCenter = normToZoomCanvas(m, 0.5, 0);
+        const showLines = mapShowLines.checked;
+
+        shots.forEach(item => {
+            if (!item.point) return;
+            const pt = normToZoomCanvas(m, item.point.x, item.point.y);
+
+            if (showLines) {
+                analysisCtx.save();
+                analysisCtx.setLineDash([4, 4]);
+                analysisCtx.lineWidth = 1.2;
+                if (item.result === 'goal') {
+                    analysisCtx.strokeStyle = 'rgba(59, 130, 246, 0.45)';
+                } else if (item.result === 'save') {
+                    analysisCtx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+                } else {
+                    analysisCtx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+                }
+                analysisCtx.beginPath();
+                analysisCtx.moveTo(pt.cx, pt.cy);
+                analysisCtx.lineTo(goalCenter.cx, goalCenter.cy);
+                analysisCtx.stroke();
+                analysisCtx.restore();
+            }
+
+            analysisCtx.beginPath();
+            analysisCtx.arc(pt.cx, pt.cy, 6.5, 0, Math.PI * 2);
+            if (item.result === 'goal') {
+                analysisCtx.fillStyle = '#3b82f6';
+            } else if (item.result === 'save') {
+                analysisCtx.fillStyle = '#f59e0b';
+            } else {
+                analysisCtx.fillStyle = '#64748b';
+            }
+            analysisCtx.fill();
+            analysisCtx.lineWidth = 1.5;
+            analysisCtx.strokeStyle = '#ffffff';
+            analysisCtx.stroke();
+
+            // 背番号ラベルを小さく表示
+            analysisCtx.fillStyle = '#ffffff';
+            analysisCtx.font = 'bold 8px sans-serif';
+            analysisCtx.textAlign = 'center';
+            analysisCtx.textBaseline = 'middle';
+            analysisCtx.fillText(item.player, pt.cx, pt.cy);
+        });
+    }
+
+    function renderAnalysisView() {
+        const shots = getFilteredShots();
+        const isGkAnalysis = (mapTargetTeam === 'opp');
+
+        const totalShots = shots.length;
+        const totalGoals = shots.filter(s => s.result === 'goal').length;
+        const totalSaves = shots.filter(s => s.result === 'save').length;
+
+        kpiShotsEl.textContent = String(totalShots);
+        kpiGoalsEl.textContent = String(totalGoals);
+
+        if (isGkAnalysis) {
+            const onTarget = totalGoals + totalSaves;
+            const saveRate = onTarget > 0 ? ((totalSaves / onTarget) * 100).toFixed(1) : '0.0';
+            kpiRatePill.innerHTML = `GKセーブ率: <strong>${saveRate}%</strong> (${totalSaves}/${onTarget})`;
+            mapGoalTitle.textContent = 'コース別 GKセーブ率（相手シュート）';
+            thRateCol.textContent = 'セーブ率';
+        } else {
+            const shootRate = totalShots > 0 ? ((totalGoals / totalShots) * 100).toFixed(1) : '0.0';
+            kpiRatePill.innerHTML = `決定率: <strong>${shootRate}%</strong>`;
+            mapGoalTitle.textContent = 'ゴールコース別 決定率';
+            thRateCol.textContent = '決定率';
+        }
+
+        // ポスト・ブロック集計
+        const postCnt = shots.filter(s => s.courseId === 'post').length;
+        const blockCnt = shots.filter(s => s.courseId === 'block').length;
+        mapSpecialCounts.textContent = `ポスト:${postCnt} / ブロック:${blockCnt}`;
+
+        // ゴール9分割ヒートマップ描画
+        analysisGoalGrid.innerHTML = '';
+        GOAL_ZONES.forEach(z => {
+            const cellShots = shots.filter(s => s.courseId === z.id);
+            const cGoals = cellShots.filter(s => s.result === 'goal').length;
+            const cSaves = cellShots.filter(s => s.result === 'save').length;
+            const cTotal = cellShots.length;
+
+            let pct = 0;
+            let rateText = '--%';
+            let subText = `${z.label} (0)`;
+
+            if (isGkAnalysis) {
+                const denom = cGoals + cSaves;
+                if (denom > 0) {
+                    pct = Math.round((cSaves / denom) * 100);
+                    rateText = `${pct}%`;
+                }
+                subText = `${z.label} 止${cSaves}/打${denom}`;
+            } else {
+                if (cTotal > 0) {
+                    pct = Math.round((cGoals / cTotal) * 100);
+                    rateText = `${pct}%`;
+                }
+                subText = `${z.label} ${cGoals}/${cTotal}`;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'ag-cell';
+            if ((isGkAnalysis ? (cGoals + cSaves) : cTotal) > 0) {
+                const alpha = 0.15 + (pct / 100) * 0.55;
+                div.style.backgroundColor = isGkAnalysis
+                    ? `rgba(16, 185, 129, ${alpha.toFixed(2)})`
+                    : `rgba(37, 99, 235, ${alpha.toFixed(2)})`;
+                div.style.borderColor = isGkAnalysis ? '#34d399' : '#60a5fa';
+            }
+
+            const rEl = document.createElement('div');
+            rEl.className = 'ag-rate';
+            rEl.textContent = rateText;
+
+            const sEl = document.createElement('div');
+            sEl.className = 'ag-sub';
+            sEl.textContent = subText;
+
+            div.appendChild(rEl);
+            div.appendChild(sEl);
+            analysisGoalGrid.appendChild(div);
+        });
+
+        // エリア別＆距離帯別テーブル
+        const groups = [
+            { section: 'レーン別集計' },
+            { label: 'LW (左サイド)', fn: s => s.point && s.point.lane === 'LW' },
+            { label: 'LB (左バック)', fn: s => s.point && s.point.lane === 'LB' },
+            { label: 'CB (センター)', fn: s => s.point && s.point.lane === 'CB' },
+            { label: 'RB (右バック)', fn: s => s.point && s.point.lane === 'RB' },
+            { label: 'RW (右サイド)', fn: s => s.point && s.point.lane === 'RW' },
+            { label: '7mスロー',      fn: s => s.quickType === '7m' },
+            { label: '速攻 (FB)',     fn: s => s.quickType === 'fastbreak' },
+            { section: '距離帯別集計' },
+            { label: '6m際 (イン)',   fn: s => s.point && s.point.depth === '6m際' },
+            { label: '6〜9m (ミドル)',fn: s => s.point && s.point.depth === '6-9m' },
+            { label: '9m外 (ロング)', fn: s => s.point && s.point.depth === '9m外' }
+        ];
+
+        analysisAreaTbody.innerHTML = '';
+        groups.forEach(g => {
+            if (g.section) {
+                const tr = document.createElement('tr');
+                tr.className = 'section-row';
+                tr.innerHTML = `<td colspan="5">${g.section}</td>`;
+                analysisAreaTbody.appendChild(tr);
+                return;
+            }
+            const sub = shots.filter(g.fn);
+            const cnt = sub.length;
+            const gl = sub.filter(s => s.result === 'goal').length;
+            const sv = sub.filter(s => s.result === 'save').length;
+
+            let rateStr = '-';
+            if (isGkAnalysis) {
+                const denom = gl + sv;
+                if (denom > 0) rateStr = `${Math.round((sv / denom) * 100)}%`;
+            } else {
+                if (cnt > 0) rateStr = `${Math.round((gl / cnt) * 100)}%`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${g.label}</td>
+                <td>${cnt}</td>
+                <td>${gl}</td>
+                <td>${sv}</td>
+                <td><strong>${rateStr}</strong></td>
+            `;
+            analysisAreaTbody.appendChild(tr);
+        });
+
+        renderAnalysisCourt();
+    }
+
+    // ==========================================
+    // タブ3：作戦盤（Tactical-Board ＋ STATデータ重ね表示）
+    // ==========================================
+    let tbTool = 'move';           // 'move' | 'line' | 'dashed' | 'arrow' | 'erase'
+    let tbColor = '#facc15';
+    let tbCourtMode = 'half';      // 'half' (20x20m) | 'full' (40x20m)
+    let tbDefTargetTeam = 'opp';   // 陣形プリセット対象: 'opp' | 'own'
+    let draggingMarker = null;
+    let activeStroke = null;
+
+    // アニメーション再生状態
+    let activeKfIndex = -1;
+    let isPlayingAnim = false;
+    let animFrameId = null;
+    let animDisplayMarkers = null;
+
+    tbToolBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tbTool = btn.dataset.tbTool;
+            tbToolBtns.forEach(b => b.classList.toggle('active', b === btn));
+        });
+    });
+
+    colorSwatches.forEach(sw => {
+        sw.addEventListener('click', () => {
+            tbColor = sw.dataset.tbColor;
+            colorSwatches.forEach(s => s.classList.toggle('active', s === sw));
+            if (tbTool === 'move' || tbTool === 'erase') {
+                tbTool = 'line';
+                tbToolBtns.forEach(b => b.classList.toggle('active', b.dataset.tbTool === 'line'));
+            }
+        });
+    });
+
+    btnTbUndoLine.addEventListener('click', () => {
+        if (tbStrokes.length === 0) return;
+        tbStrokes.pop();
+        saveAllData();
+        renderTacticsBoard();
+    });
+
+    btnTbClearLines.addEventListener('click', () => {
+        tbStrokes = [];
+        saveAllData();
+        renderTacticsBoard();
+    });
+
+    btnTbCourtMode.addEventListener('click', () => {
+        tbCourtMode = (tbCourtMode === 'half') ? 'full' : 'half';
+        btnTbCourtMode.textContent = tbCourtMode === 'half' ? 'コート: 半面' : 'コート: 全面';
+        renderTacticsBoard();
+    });
+
+    tbStatOverlay.addEventListener('change', renderTacticsBoard);
+
+    btnTbDefSide.addEventListener('click', () => {
+        tbDefTargetTeam = (tbDefTargetTeam === 'opp') ? 'own' : 'opp';
+        btnTbDefSide.textContent = tbDefTargetTeam === 'opp' ? '守備: 相手(赤)' : '守備: 自チーム(青)';
+    });
+
+    // DF陣形プリセット配置（半面20m×20m基準）
+    const FORMATION_COORDS = {
+        '6-0': [
+            { x: 0.16, y: 0.24 }, { x: 0.30, y: 0.33 }, { x: 0.43, y: 0.35 },
+            { x: 0.57, y: 0.35 }, { x: 0.70, y: 0.33 }, { x: 0.84, y: 0.24 }
+        ],
+        '5-1': [
+            { x: 0.16, y: 0.24 }, { x: 0.32, y: 0.33 }, { x: 0.50, y: 0.35 },
+            { x: 0.68, y: 0.33 }, { x: 0.84, y: 0.24 }, { x: 0.50, y: 0.48 }
+        ],
+        '3-2-1': [
+            { x: 0.22, y: 0.28 }, { x: 0.50, y: 0.34 }, { x: 0.78, y: 0.28 },
+            { x: 0.35, y: 0.43 }, { x: 0.65, y: 0.43 }, { x: 0.50, y: 0.52 }
+        ],
+        '4-2': [
+            { x: 0.18, y: 0.25 }, { x: 0.38, y: 0.34 }, { x: 0.62, y: 0.34 },
+            { x: 0.82, y: 0.25 }, { x: 0.36, y: 0.47 }, { x: 0.64, y: 0.47 }
+        ]
+    };
+
+    tbPresetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            stopKeyframeAnim();
+            const fmt = btn.dataset.formation;
+            const coords = FORMATION_COORDS[fmt];
+            if (!coords) return;
+
+            const fieldPlayers = tbMarkers.filter(m => m.team === tbDefTargetTeam && !m.isGk);
+            fieldPlayers.forEach((p, idx) => {
+                if (coords[idx]) {
+                    p.x = coords[idx].x;
+                    p.y = coords[idx].y;
+                }
+            });
+            saveAllData();
+            renderTacticsBoard();
+        });
+    });
+
+    btnTbResetPos.addEventListener('click', () => {
+        stopKeyframeAnim();
+        tbMarkers = createDefaultMarkers();
+        saveAllData();
+        renderTacticsBoard();
+    });
+
+    // キーフレーム（コマ送り）操作
+    function renderKeyframeChips() {
+        kfListWrap.innerHTML = '';
+        tbKeyframes.forEach((kf, idx) => {
+            const chip = document.createElement('button');
+            chip.className = `kf-chip ${idx === activeKfIndex ? 'active' : ''}`;
+            chip.textContent = `コマ${idx + 1}`;
+            chip.title = 'タップでこの配置を表示';
+            chip.addEventListener('click', () => {
+                stopKeyframeAnim();
+                activeKfIndex = idx;
+                tbMarkers = JSON.parse(JSON.stringify(tbKeyframes[idx]));
+                renderKeyframeChips();
+                renderTacticsBoard();
+            });
+            kfListWrap.appendChild(chip);
+        });
+    }
+
+    btnKfAdd.addEventListener('click', () => {
+        stopKeyframeAnim();
+        tbKeyframes.push(JSON.parse(JSON.stringify(tbMarkers)));
+        activeKfIndex = tbKeyframes.length - 1;
+        saveAllData();
+        renderKeyframeChips();
+    });
+
+    btnKfClear.addEventListener('click', () => {
+        stopKeyframeAnim();
+        tbKeyframes = [];
+        activeKfIndex = -1;
+        saveAllData();
+        renderKeyframeChips();
+    });
+
+    function stopKeyframeAnim() {
+        if (animFrameId) {
+            cancelAnimationFrame(animFrameId);
+            animFrameId = null;
+        }
+        isPlayingAnim = false;
+        animDisplayMarkers = null;
+        btnKfPlay.textContent = '▶ 再生';
+        btnKfPlay.classList.remove('playing');
+    }
+
+    btnKfPlay.addEventListener('click', () => {
+        if (isPlayingAnim) {
+            stopKeyframeAnim();
+            renderTacticsBoard();
+            return;
+        }
+        if (tbKeyframes.length < 2) {
+            alert('アニメーション再生するには、選手を動かしながら「＋コマ追加」を2コマ以上登録してください。');
+            return;
+        }
+
+        isPlayingAnim = true;
+        btnKfPlay.textContent = '❚❚ 停止';
+        btnKfPlay.classList.add('playing');
+
+        const STEP_DURATION_MS = 950;
+        let startTime = performance.now();
+
+        function stepAnim(now) {
+            if (!isPlayingAnim) return;
+            const elapsed = now - startTime;
+            const totalSegments = tbKeyframes.length - 1;
+            const rawStep = elapsed / STEP_DURATION_MS;
+
+            if (rawStep >= totalSegments) {
+                if (chkKfLoop.checked) {
+                    startTime = now;
+                    animFrameId = requestAnimationFrame(stepAnim);
+                } else {
+                    tbMarkers = JSON.parse(JSON.stringify(tbKeyframes[totalSegments]));
+                    activeKfIndex = totalSegments;
+                    stopKeyframeAnim();
+                    renderKeyframeChips();
+                    renderTacticsBoard();
+                }
+                return;
+            }
+
+            const segIdx = Math.floor(rawStep);
+            const t = rawStep - segIdx;
+            // スムーズイージング
+            const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+            const fromFrame = tbKeyframes[segIdx];
+            const toFrame = tbKeyframes[segIdx + 1];
+
+            animDisplayMarkers = fromFrame.map((fm, i) => {
+                const tm = toFrame[i] || fm;
+                return {
+                    ...fm,
+                    x: fm.x + (tm.x - fm.x) * easeT,
+                    y: fm.y + (tm.y - fm.y) * easeT
+                };
+            });
+
+            if (activeKfIndex !== segIdx) {
+                activeKfIndex = segIdx;
+                renderKeyframeChips();
+            }
+
+            renderTacticsBoard();
+            animFrameId = requestAnimationFrame(stepAnim);
+        }
+
+        animFrameId = requestAnimationFrame(stepAnim);
+    });
+
+    // 作戦盤Canvas描画と座標変換
+    function resizeTacticsCanvas() {
+        const wrap = tacticsCanvas.parentElement;
+        const rect = wrap.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        tacticsCanvas.width = Math.floor(rect.width * dpr);
+        tacticsCanvas.height = Math.floor(rect.height * dpr);
+        tbCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        renderTacticsBoard();
+    }
+
+    function getTacticsMetrics() {
+        const wrap = tacticsCanvas.parentElement;
+        const rect = wrap.getBoundingClientRect();
+        const pad = 14;
+        const availW = Math.max(200, rect.width - pad * 2);
+        const availH = Math.max(200, rect.height - pad * 2);
+
+        const realW = tbCourtMode === 'half' ? 20.0 : 40.0;
+        const realH = 20.0;
+
+        const pxPerM = Math.min(availW / realW, availH / realH);
+        const drawW = realW * pxPerM;
+        const drawH = realH * pxPerM;
+
+        return {
+            viewW: rect.width,
+            viewH: rect.height,
+            x0: (rect.width - drawW) / 2,
+            y0: (rect.height - drawH) / 2,
+            w: drawW,
+            h: drawH,
+            pxPerM
+        };
+    }
+
+    function renderTacticsBoard() {
+        const m = getTacticsMetrics();
+        tbCtx.clearRect(0, 0, m.viewW, m.viewH);
+
+        // コート床
+        tbCtx.save();
+        tbCtx.fillStyle = '#0d2238';
+        tbCtx.fillRect(m.x0, m.y0, m.w, m.h);
+        tbCtx.strokeStyle = '#e2e8f0';
+        tbCtx.lineWidth = 2.5;
+        tbCtx.strokeRect(m.x0, m.y0, m.w, m.h);
+
+        tbCtx.beginPath();
+        tbCtx.rect(m.x0, m.y0, m.w, m.h);
+        tbCtx.clip();
+
+        const pxPerM = m.pxPerM;
+
+        if (tbCourtMode === 'half') {
+            // 半面コート（20m × 20m、上端ゴールライン）
+            const leftPostX = m.x0 + (10 - 1.5) * pxPerM;
+            const rightPostX = m.x0 + (10 + 1.5) * pxPerM;
+
+            // 6mエリア
+            tbCtx.beginPath();
+            tbCtx.arc(leftPostX, m.y0, 6 * pxPerM, Math.PI, Math.PI / 2, true);
+            tbCtx.lineTo(rightPostX, m.y0 + 6 * pxPerM);
+            tbCtx.arc(rightPostX, m.y0, 6 * pxPerM, Math.PI / 2, 0, true);
+            tbCtx.closePath();
+            tbCtx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+            tbCtx.fill();
+            tbCtx.lineWidth = 2;
+            tbCtx.strokeStyle = '#34d399';
+            tbCtx.stroke();
+
+            // 9mライン
+            tbCtx.beginPath();
+            tbCtx.setLineDash([7, 6]);
+            tbCtx.arc(leftPostX, m.y0, 9 * pxPerM, Math.PI, Math.PI / 2, true);
+            tbCtx.lineTo(rightPostX, m.y0 + 9 * pxPerM);
+            tbCtx.arc(rightPostX, m.y0, 9 * pxPerM, Math.PI / 2, 0, true);
+            tbCtx.lineWidth = 1.8;
+            tbCtx.strokeStyle = 'rgba(226, 232, 240, 0.7)';
+            tbCtx.stroke();
+            tbCtx.setLineDash([]);
+
+            // 7mライン
+            tbCtx.beginPath();
+            tbCtx.moveTo(m.x0 + 9.5 * pxPerM, m.y0 + 7 * pxPerM);
+            tbCtx.lineTo(m.x0 + 10.5 * pxPerM, m.y0 + 7 * pxPerM);
+            tbCtx.lineWidth = 2;
+            tbCtx.strokeStyle = '#ffffff';
+            tbCtx.stroke();
+
+            // ゴール枠
+            tbCtx.fillStyle = '#ef4444';
+            tbCtx.fillRect(leftPostX, m.y0, 3 * pxPerM, 5);
+
+            // ★ STATデータ重ね表示（半面コートと実測座標が完全一致）
+            const overlayMode = tbStatOverlay.value;
+            if (overlayMode !== 'off') {
+                const goalCenterX = m.x0 + 10 * pxPerM;
+                const goalCenterY = m.y0;
+                const SHOT_RESULTS = ['goal', 'save', 'miss'];
+
+                historyLogs.forEach(item => {
+                    if (item.team !== overlayMode) return;
+                    if (!SHOT_RESULTS.includes(item.result)) return;
+                    if (!item.point) return;
+
+                    const sx = m.x0 + item.point.x * m.w;
+                    const sy = m.y0 + item.point.y * m.h;
+
+                    tbCtx.save();
+                    tbCtx.setLineDash([4, 4]);
+                    tbCtx.lineWidth = 1.3;
+                    tbCtx.strokeStyle = item.result === 'goal'
+                        ? 'rgba(56, 189, 248, 0.5)'
+                        : 'rgba(251, 191, 36, 0.45)';
+                    tbCtx.beginPath();
+                    tbCtx.moveTo(sx, sy);
+                    tbCtx.lineTo(goalCenterX, goalCenterY);
+                    tbCtx.stroke();
+                    tbCtx.restore();
+
+                    tbCtx.beginPath();
+                    tbCtx.arc(sx, sy, 5.5, 0, Math.PI * 2);
+                    tbCtx.fillStyle = item.result === 'goal' ? '#38bdf8' : (item.result === 'save' ? '#fbbf24' : '#94a3b8');
+                    tbCtx.fill();
+                    tbCtx.lineWidth = 1.2;
+                    tbCtx.strokeStyle = '#0f172a';
+                    tbCtx.stroke();
+                });
+            }
+        } else {
+            // 全面コート（40m × 20m、横向き）
+            const midX = m.x0 + m.w / 2;
+            tbCtx.beginPath();
+            tbCtx.moveTo(midX, m.y0);
+            tbCtx.lineTo(midX, m.y0 + m.h);
+            tbCtx.lineWidth = 2;
+            tbCtx.strokeStyle = '#e2e8f0';
+            tbCtx.stroke();
+
+            const topPostY = m.y0 + (10 - 1.5) * pxPerM;
+            const botPostY = m.y0 + (10 + 1.5) * pxPerM;
+
+            // 左ゴール6m・9m
+            tbCtx.beginPath();
+            tbCtx.arc(m.x0, topPostY, 6 * pxPerM, -Math.PI / 2, 0, false);
+            tbCtx.lineTo(m.x0 + 6 * pxPerM, botPostY);
+            tbCtx.arc(m.x0, botPostY, 6 * pxPerM, 0, Math.PI / 2, false);
+            tbCtx.closePath();
+            tbCtx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+            tbCtx.fill();
+            tbCtx.strokeStyle = '#34d399';
+            tbCtx.stroke();
+
+            tbCtx.beginPath();
+            tbCtx.setLineDash([6, 6]);
+            tbCtx.arc(m.x0, topPostY, 9 * pxPerM, -Math.PI / 2, 0, false);
+            tbCtx.lineTo(m.x0 + 9 * pxPerM, botPostY);
+            tbCtx.arc(m.x0, botPostY, 9 * pxPerM, 0, Math.PI / 2, false);
+            tbCtx.strokeStyle = 'rgba(226, 232, 240, 0.65)';
+            tbCtx.stroke();
+
+            // 右ゴール6m・9m
+            tbCtx.setLineDash([]);
+            tbCtx.beginPath();
+            tbCtx.arc(m.x0 + m.w, topPostY, 6 * pxPerM, Math.PI, Math.PI * 1.5, false);
+            tbCtx.arc(m.x0 + m.w, botPostY, 6 * pxPerM, Math.PI / 2, Math.PI, false);
+            tbCtx.closePath();
+            tbCtx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+            tbCtx.fill();
+            tbCtx.strokeStyle = '#34d399';
+            tbCtx.stroke();
+
+            tbCtx.beginPath();
+            tbCtx.setLineDash([6, 6]);
+            tbCtx.arc(m.x0 + m.w, topPostY, 9 * pxPerM, Math.PI, Math.PI * 1.5, false);
+            tbCtx.arc(m.x0 + m.w, botPostY, 9 * pxPerM, Math.PI / 2, Math.PI, false);
+            tbCtx.strokeStyle = 'rgba(226, 232, 240, 0.65)';
+            tbCtx.stroke();
+            tbCtx.setLineDash([]);
+        }
+
+        // 手書きストローク描画
+        const allStrokes = activeStroke ? [...tbStrokes, activeStroke] : tbStrokes;
+        allStrokes.forEach(st => {
+            if (!st.points || st.points.length < 2) return;
+            tbCtx.save();
+            tbCtx.strokeStyle = st.color;
+            tbCtx.fillStyle = st.color;
+            tbCtx.lineWidth = 3;
+            tbCtx.lineCap = 'round';
+            tbCtx.lineJoin = 'round';
+            if (st.type === 'dashed') tbCtx.setLineDash([8, 7]);
+
+            tbCtx.beginPath();
+            st.points.forEach((p, idx) => {
+                const px = m.x0 + p.x * m.w;
+                const py = m.y0 + p.y * m.h;
+                if (idx === 0) tbCtx.moveTo(px, py);
+                else tbCtx.lineTo(px, py);
+            });
+            tbCtx.stroke();
+
+            if (st.type === 'arrow') {
+                const pLast = st.points[st.points.length - 1];
+                const pPrev = st.points[Math.max(0, st.points.length - 3)];
+                const x2 = m.x0 + pLast.x * m.w;
+                const y2 = m.y0 + pLast.y * m.h;
+                const x1 = m.x0 + pPrev.x * m.w;
+                const y1 = m.y0 + pPrev.y * m.h;
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const headLen = 13;
+
+                tbCtx.setLineDash([]);
+                tbCtx.beginPath();
+                tbCtx.moveTo(x2, y2);
+                tbCtx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+                tbCtx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+                tbCtx.closePath();
+                tbCtx.fill();
+            }
+            tbCtx.restore();
+        });
+
+        // 選手＆ボールマーカー描画
+        const markersToDraw = animDisplayMarkers || tbMarkers;
+        markersToDraw.forEach(mk => {
+            const cx = m.x0 + mk.x * m.w;
+            const cy = m.y0 + mk.y * m.h;
+
+            if (mk.team === 'ball') {
+                tbCtx.beginPath();
+                tbCtx.arc(cx, cy, 9, 0, Math.PI * 2);
+                tbCtx.fillStyle = '#facc15';
+                tbCtx.fill();
+                tbCtx.lineWidth = 2;
+                tbCtx.strokeStyle = '#1e293b';
+                tbCtx.stroke();
+                return;
+            }
+
+            const radius = 15;
+            tbCtx.beginPath();
+            tbCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+            if (mk.isGk) {
+                tbCtx.fillStyle = '#059669';
+            } else {
+                tbCtx.fillStyle = mk.team === 'own' ? '#2563eb' : '#e11d48';
+            }
+            tbCtx.fill();
+            tbCtx.lineWidth = 2.2;
+            tbCtx.strokeStyle = '#ffffff';
+            tbCtx.stroke();
+
+            tbCtx.fillStyle = '#ffffff';
+            tbCtx.font = 'bold 12px sans-serif';
+            tbCtx.textAlign = 'center';
+            tbCtx.textBaseline = 'middle';
+            tbCtx.fillText(mk.num, cx, cy);
+
+            // 名簿に名前があればマーカー下に表示
+            const pName = getPlayerDisplayName(mk.team, mk.num);
+            if (pName) {
+                tbCtx.font = 'bold 10px sans-serif';
+                tbCtx.fillStyle = '#f8fafc';
+                tbCtx.fillText(pName, cx, cy + radius + 9);
+            }
+        });
+
+        tbCtx.restore();
+    }
+
+    // 作戦盤ポインター操作（ドラッグ移動 / 描画 / 消しゴム）
+    tacticsCanvas.addEventListener('pointerdown', (e) => {
+        stopKeyframeAnim();
+        const m = getTacticsMetrics();
+        const rect = tacticsCanvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const nx = Math.max(0.02, Math.min(0.98, (px - m.x0) / m.w));
+        const ny = Math.max(0.02, Math.min(0.98, (py - m.y0) / m.h));
+
+        tacticsCanvas.setPointerCapture(e.pointerId);
+
+        if (tbTool === 'move') {
+            // 一番近いマーカーをヒット判定（手前から優先）
+            for (let i = tbMarkers.length - 1; i >= 0; i--) {
+                const mk = tbMarkers[i];
+                const mx = m.x0 + mk.x * m.w;
+                const my = m.y0 + mk.y * m.h;
+                if (Math.hypot(px - mx, py - my) <= 24) {
+                    draggingMarker = mk;
+                    break;
+                }
+            }
+        } else if (tbTool === 'erase') {
+            tbStrokes = tbStrokes.filter(st => {
+                return !st.points.some(pt => {
+                    const sx = m.x0 + pt.x * m.w;
+                    const sy = m.y0 + pt.y * m.h;
+                    return Math.hypot(px - sx, py - sy) <= 18;
+                });
+            });
+            saveAllData();
+            renderTacticsBoard();
+        } else {
+            activeStroke = {
+                type: tbTool,
+                color: tbColor,
+                points: [{ x: nx, y: ny }]
+            };
+            renderTacticsBoard();
+        }
+    });
+
+    tacticsCanvas.addEventListener('pointermove', (e) => {
+        if (!tacticsCanvas.hasPointerCapture(e.pointerId)) return;
+        const m = getTacticsMetrics();
+        const rect = tacticsCanvas.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const nx = Math.max(0.02, Math.min(0.98, (px - m.x0) / m.w));
+        const ny = Math.max(0.02, Math.min(0.98, (py - m.y0) / m.h));
+
+        if (tbTool === 'move' && draggingMarker) {
+            draggingMarker.x = Number(nx.toFixed(4));
+            draggingMarker.y = Number(ny.toFixed(4));
+            renderTacticsBoard();
+        } else if (tbTool === 'erase') {
+            tbStrokes = tbStrokes.filter(st => {
+                return !st.points.some(pt => {
+                    const sx = m.x0 + pt.x * m.w;
+                    const sy = m.y0 + pt.y * m.h;
+                    return Math.hypot(px - sx, py - sy) <= 18;
+                });
+            });
+            renderTacticsBoard();
+        } else if (activeStroke) {
+            activeStroke.points.push({ x: nx, y: ny });
+            renderTacticsBoard();
+        }
+    });
+
+    tacticsCanvas.addEventListener('pointerup', (e) => {
+        if (tacticsCanvas.hasPointerCapture(e.pointerId)) {
+            tacticsCanvas.releasePointerCapture(e.pointerId);
+        }
+        if (draggingMarker) {
+            draggingMarker = null;
+            saveAllData();
+        }
+        if (activeStroke) {
+            if (activeStroke.points.length >= 2) {
+                tbStrokes.push(activeStroke);
+            }
+            activeStroke = null;
+            saveAllData();
+            renderTacticsBoard();
+        }
+    });
+
+    // ==========================================
+    // タブ4：名簿・CSV出力・データ管理
+    // ==========================================
+    let activeRosterTeam = 'own';
+
     function updateSummaryCardUI() {
         matchTitleInput.value = matchInfo.title || '';
         matchOpponentInput.value = matchInfo.opponent || '';
@@ -858,7 +1708,6 @@ function initStatApp() {
             const info = targetMap[numStr] || { name: '', pos: '' };
 
             const tr = document.createElement('tr');
-
             const tdNum = document.createElement('td');
             tdNum.className = 'roster-num-cell';
             tdNum.textContent = `#${numStr}`;
@@ -872,9 +1721,7 @@ function initStatApp() {
             nameInput.addEventListener('input', () => {
                 targetMap[numStr].name = nameInput.value;
                 saveAllData();
-                if (activeRosterTeam === currentTeam) {
-                    buildJerseyGrid();
-                }
+                if (activeRosterTeam === currentTeam) buildJerseyGrid();
             });
             tdName.appendChild(nameInput);
 
@@ -901,7 +1748,6 @@ function initStatApp() {
         }
     }
 
-    // Excel用 CSV ダウンロード（BOM付きUTF-8）
     btnExportCsv.addEventListener('click', () => {
         const headers = [
             'No', '前後半', '時間', 'チーム', '背番号', '選手名',
@@ -913,10 +1759,9 @@ function initStatApp() {
         const escapeCsv = (val) => {
             if (val === null || val === undefined) return '';
             const str = String(val);
-            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-                return `"${str.replace(/"/g, '""')}"`;
-            }
-            return str;
+            return (str.includes(',') || str.includes('"') || str.includes('\n'))
+                ? `"${str.replace(/"/g, '""')}"`
+                : str;
         };
 
         const rows = historyLogs.map((item, idx) => {
@@ -927,22 +1772,11 @@ function initStatApp() {
             const yM = item.point ? (item.point.y * 20.0).toFixed(2) : '';
 
             return [
-                idx + 1,
-                item.half || '前半',
-                item.timeStr,
-                teamName,
-                item.player,
-                item.playerName || '',
-                item.resultLabel,
-                item.zoneLabel || '',
-                lane,
-                depth,
-                item.angleDeg !== null && item.angleDeg !== undefined ? item.angleDeg : '',
-                item.acuteAngleDeg !== null && item.acuteAngleDeg !== undefined ? item.acuteAngleDeg : '',
-                item.distM !== null && item.distM !== undefined ? item.distM : '',
-                xM,
-                yM,
-                item.courseLabel || ''
+                idx + 1, item.half || '前半', item.timeStr, teamName,
+                item.player, item.playerName || '', item.resultLabel,
+                item.zoneLabel || '', lane, depth,
+                item.angleDeg ?? '', item.acuteAngleDeg ?? '', item.distM ?? '',
+                xM, yM, item.courseLabel || ''
             ].map(escapeCsv).join(',');
         });
 
@@ -953,21 +1787,17 @@ function initStatApp() {
         const now = new Date();
         const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
         const oppClean = (matchInfo.opponent || '試合データ').replace(/[\\/:*?"<>|]/g, '_');
-        const filename = `STAT_${ymd}_${oppClean}.csv`;
-
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename;
+        a.download = `STAT_${ymd}_${oppClean}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
 
-    // 試合データリセット（名簿は維持）
     btnResetMatch.addEventListener('click', () => {
-        const ok = window.confirm('現在のスコア・タイマー・プレイ記録をすべて消去して新しい試合を始めますか？（登録した選手名簿は残ります）');
-        if (!ok) return;
+        if (!window.confirm('現在のスコア・タイマー・プレイ記録をすべて消去して新しい試合を始めますか？（登録した選手名簿は残ります）')) return;
 
         if (isTimerRunning) {
             clearInterval(timerInterval);
@@ -992,7 +1822,7 @@ function initStatApp() {
         renderHistoryUI();
         updateTelemetryUI();
         updateGoalSelectionUI();
-        renderCourt();
+        renderShotCourt();
         updateSummaryCardUI();
         saveAllData();
     });
@@ -1007,12 +1837,12 @@ function initStatApp() {
     updateTelemetryUI();
     updateScoreUI();
     renderHistoryUI();
-    resizeCourtCanvas();
+    resizeShotCanvas();
 
     window.addEventListener('resize', () => {
-        if (viewInput.style.display !== 'none') {
-            resizeCourtCanvas();
-        }
+        if (activeTab === 'input') resizeShotCanvas();
+        else if (activeTab === 'map') resizeAnalysisCanvas();
+        else if (activeTab === 'tactics') resizeTacticsCanvas();
     });
 }
 
