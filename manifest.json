@@ -1,16 +1,16 @@
 {
-    "name": "Tactical-Board",
-    "short_name": "Tactical-Board",
-    "start_url": "./index.html",
-    "display": "standalone",
-    "background_color": "#070f1e",
-    "theme_color": "#0b3b75",
-    "icons": [
-        {
-            "src": "icon.png?v=4",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ]
+  "name": "Tactical-Board STAT",
+  "short_name": "STAT Board",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070f1e",
+  "theme_color": "#092b59",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
