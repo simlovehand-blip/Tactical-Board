@@ -86,7 +86,7 @@ body {
 }
 
 .tab-btn {
-    padding: 5px 10px;
+    padding: 5px 11px;
     font-size: 12px;
     font-weight: 700;
     border: none;
@@ -100,11 +100,6 @@ body {
 .tab-btn.active {
     background: #0284c7;
     color: #ffffff;
-}
-
-.tab-btn:disabled {
-    opacity: 0.42;
-    cursor: not-allowed;
 }
 
 .hud-area {
@@ -179,11 +174,7 @@ body {
     padding: 3px 9px;
 }
 
-.score-team {
-    font-size: 11px;
-    font-weight: 800;
-}
-
+.score-team { font-size: 11px; font-weight: 800; }
 .score-team.own { color: #60a5fa; }
 .score-team.opp { color: #fb7185; }
 
@@ -196,22 +187,7 @@ body {
     text-align: center;
 }
 
-.score-sep {
-    color: #64748b;
-    font-weight: 700;
-}
-
-/* ==========================================
-   メイン3列ワークスペース（試合入力）
-========================================== */
-.workspace {
-    flex: 1;
-    min-height: 0;
-    display: grid;
-    grid-template-columns: 220px minmax(0, 1fr) 245px;
-    gap: 10px;
-    padding: 10px;
-}
+.score-sep { color: #64748b; font-weight: 700; }
 
 .panel {
     min-height: 0;
@@ -225,8 +201,17 @@ body {
 }
 
 /* ==========================================
-   左パネル：チーム切替＆背番号（1〜18）
+   タブ1：試合入力ワークスペース
 ========================================== */
+.workspace {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr) 245px;
+    gap: 10px;
+    padding: 10px;
+}
+
 .team-switch {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -321,11 +306,7 @@ body {
     overflow: hidden;
 }
 
-.jersey-num {
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1.1;
-}
+.jersey-num { font-size: 14px; font-weight: 800; line-height: 1.1; }
 
 .jersey-name {
     font-size: 9px;
@@ -338,9 +319,7 @@ body {
     text-overflow: ellipsis;
 }
 
-.jersey-btn.active .jersey-name {
-    color: #e0f2fe;
-}
+.jersey-btn.active .jersey-name { color: #e0f2fe; }
 
 .jersey-btn.active.own {
     background: #1d4ed8;
@@ -356,20 +335,9 @@ body {
     box-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
 }
 
-/* ==========================================
-   中央パネル：ゴール9分割＆6m〜9mコート図
-========================================== */
-.center-panel {
-    gap: 8px;
-    padding: 10px 12px;
-}
-
-.goal-section {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
+/* 中央パネル */
+.center-panel { gap: 8px; padding: 10px 12px; }
+.goal-section { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
 
 .goal-outer {
     position: relative;
@@ -382,13 +350,7 @@ body {
 .goal-crossbar {
     height: 7px;
     border-radius: 4px 4px 0 0;
-    background: repeating-linear-gradient(
-        90deg,
-        #ef4444 0px,
-        #ef4444 14px,
-        #f8fafc 14px,
-        #f8fafc 28px
-    );
+    background: repeating-linear-gradient(90deg, #ef4444 0px, #ef4444 14px, #f8fafc 14px, #f8fafc 28px);
     margin: 0 2px;
 }
 
@@ -428,10 +390,7 @@ body {
     box-shadow: 0 0 12px rgba(6, 182, 212, 0.55);
 }
 
-.goal-sub-actions {
-    display: flex;
-    gap: 6px;
-}
+.goal-sub-actions { display: flex; gap: 6px; }
 
 .sub-chip-btn {
     flex: 1;
@@ -445,32 +404,11 @@ body {
     cursor: pointer;
 }
 
-.sub-chip-btn.active {
-    background: #7c3aed;
-    border-color: #c4b5fd;
-    color: #ffffff;
-}
+.sub-chip-btn.active { background: #7c3aed; border-color: #c4b5fd; color: #ffffff; }
+.sub-chip-btn.clear-chip { flex: 0 0 auto; padding: 6px 10px; color: #94a3b8; }
 
-.sub-chip-btn.clear-chip {
-    flex: 0 0 auto;
-    padding: 6px 10px;
-    color: #94a3b8;
-}
-
-.court-section {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.court-telemetry {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    flex-shrink: 0;
-}
+.court-section { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.court-telemetry { display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0; }
 
 .telemetry-pill {
     font-size: 11px;
@@ -498,20 +436,9 @@ body {
     justify-content: center;
 }
 
-#shot-court-canvas {
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-    cursor: crosshair;
-    display: block;
-}
+#shot-court-canvas { width: 100%; height: 100%; touch-action: none; cursor: crosshair; display: block; }
 
-.court-quick-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    flex-shrink: 0;
-}
+.court-quick-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; flex-shrink: 0; }
 
 .quick-zone-btn {
     padding: 7px 6px;
@@ -524,21 +451,10 @@ body {
     cursor: pointer;
 }
 
-.quick-zone-btn.active {
-    background: #0284c7;
-    border-color: #7dd3fc;
-    color: #ffffff;
-}
+.quick-zone-btn.active { background: #0284c7; border-color: #7dd3fc; color: #ffffff; }
 
-/* ==========================================
-   右パネル：結果ボタン＆直近プレイログ
-========================================== */
-.result-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
-    flex-shrink: 0;
-}
+/* 右パネル */
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; flex-shrink: 0; }
 
 .result-btn {
     padding: 12px 6px;
@@ -548,13 +464,10 @@ body {
     font-weight: 800;
     color: #ffffff;
     cursor: pointer;
-    transition: transform 0.06s, filter 0.12s;
+    transition: transform 0.06s;
 }
 
-.result-btn:active {
-    transform: scale(0.97);
-}
-
+.result-btn:active { transform: scale(0.97); }
 .result-btn.goal { background: #1d4ed8; border-color: #60a5fa; }
 .result-btn.save { background: #b45309; border-color: #fbbf24; }
 .result-btn.miss { background: #be123c; border-color: #fda4af; }
@@ -595,10 +508,7 @@ body {
     cursor: pointer;
 }
 
-.undo-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
+.undo-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .play-log-list {
     list-style: none;
@@ -612,12 +522,7 @@ body {
     gap: 5px;
 }
 
-.log-empty {
-    font-size: 12px;
-    color: #64748b;
-    text-align: center;
-    padding: 16px 6px;
-}
+.log-empty { font-size: 12px; color: #64748b; text-align: center; padding: 16px 6px; }
 
 .log-item {
     background: #111e36;
@@ -629,21 +534,326 @@ body {
     line-height: 1.35;
 }
 
-.log-item.opp {
-    border-left-color: #f43f5e;
-}
+.log-item.opp { border-left-color: #f43f5e; }
+.log-item-top { display: flex; justify-content: space-between; font-weight: 800; color: #f8fafc; }
+.log-item-sub { color: #94a3b8; font-size: 10px; margin-top: 2px; }
 
-.log-item-top {
+/* ==========================================
+   タブ2：分析マップ画面
+========================================== */
+.map-workspace {
+    flex: 1;
+    min-height: 0;
+    padding: 10px;
     display: flex;
-    justify-content: space-between;
-    font-weight: 800;
-    color: #f8fafc;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.log-item-sub {
-    color: #94a3b8;
-    font-size: 10px;
-    margin-top: 2px;
+.filter-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    flex-shrink: 0;
+}
+
+.filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.map-team-btn {
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid #2c436e;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.map-team-btn.active.own { background: #1d4ed8; border-color: #93c5fd; color: #ffffff; }
+.map-team-btn.active.opp { background: #be123c; border-color: #fda4af; color: #ffffff; }
+
+.filter-select {
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1px solid #2c436e;
+    background: #08101e;
+    color: #f1f5f9;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.toggle-check {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.map-kpi-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kpi-pill {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #08101e;
+    border: 1px solid #23385c;
+    color: #cbd5e1;
+}
+
+.kpi-pill strong { color: #38bdf8; font-size: 14px; }
+
+.map-main-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 10px;
+}
+
+.map-court-card { flex: 1; min-height: 0; }
+
+.map-legend {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.leg-item { display: flex; align-items: center; gap: 4px; }
+.dot-goal { width: 9px; height: 9px; border-radius: 50%; background: #3b82f6; display: inline-block; }
+.dot-save { width: 9px; height: 9px; border-radius: 50%; background: #f59e0b; display: inline-block; }
+.dot-miss { width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; display: inline-block; }
+
+.map-canvas-wrap {
+    flex: 1;
+    min-height: 220px;
+    position: relative;
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#analysis-court-canvas { width: 100%; height: 100%; display: block; }
+
+.map-right-col {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.analysis-goal-outer {
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.analysis-goal-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 44px);
+    gap: 4px;
+    padding: 5px;
+}
+
+.ag-cell {
+    border-radius: 6px;
+    border: 1px solid #2b446e;
+    background: rgba(24, 41, 71, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+}
+
+.ag-rate { font-size: 13px; font-weight: 800; color: #ffffff; }
+.ag-sub { font-size: 10px; color: #cbd5e1; }
+
+.map-table-card { flex: 1; min-height: 0; }
+
+.analysis-table-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid #1e3354;
+    border-radius: 8px;
+    background: #08101e;
+}
+
+.analysis-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.analysis-table th {
+    position: sticky;
+    top: 0;
+    background: #13223d;
+    color: #cbd5e1;
+    font-size: 11px;
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid #233659;
+}
+
+.analysis-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #162540;
+    color: #e2e8f0;
+}
+
+.analysis-table tr.section-row td {
+    background: #0f1b30;
+    font-weight: 800;
+    color: #93c5fd;
+    font-size: 11px;
+}
+
+/* ==========================================
+   タブ3：作戦盤（Tactical-Board ＋ STAT連携）
+========================================== */
+.tactics-workspace {
+    flex: 1;
+    min-height: 0;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tactics-toolbar,
+.tactics-subbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.tool-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+
+.subbar-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.tb-tool-btn,
+.tb-mini-btn,
+.tb-preset-btn {
+    padding: 5px 9px;
+    border-radius: 7px;
+    border: 1px solid #2c436e;
+    background: var(--bg-card);
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tb-tool-btn.active {
+    background: #0284c7;
+    border-color: #7dd3fc;
+    color: #ffffff;
+}
+
+.tb-mini-btn.accent { border-color: #38bdf8; color: #bae6fd; }
+.tb-mini-btn.green { background: #065f46; border-color: #34d399; color: #ecfdf5; }
+.tb-mini-btn.amber { background: #92400e; border-color: #fbbf24; color: #fffbeb; }
+.tb-mini-btn.amber.playing { background: #dc2626; border-color: #fca5a5; }
+.tb-mini-btn.danger { border-color: #f43f5e; color: #fecdd3; }
+
+.color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.color-swatch.active {
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px #0284c7;
+    transform: scale(1.1);
+}
+
+.kf-list-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 260px;
+    overflow-x: auto;
+}
+
+.kf-chip {
+    padding: 3px 7px;
+    border-radius: 5px;
+    border: 1px solid #3b527a;
+    background: #0b1629;
+    color: #93c5fd;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.kf-chip.active {
+    background: #2563eb;
+    border-color: #93c5fd;
+    color: #ffffff;
+}
+
+.tactics-board-card {
+    flex: 1;
+    min-height: 0;
+    padding: 6px;
+}
+
+.tactics-canvas-wrap {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    position: relative;
+    background: #08101e;
+    border: 1px solid #1e3354;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#tactics-canvas {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    display: block;
 }
 
 /* ==========================================
@@ -672,12 +882,7 @@ body {
     gap: 8px;
 }
 
-.card-title-row h2 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 800;
-    color: #ffffff;
-}
+.card-title-row h2 { margin: 0; font-size: 15px; font-weight: 800; color: #ffffff; }
 
 .autosave-badge {
     font-size: 10px;
@@ -689,17 +894,8 @@ body {
     color: #6ee7b7;
 }
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.form-group label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-muted);
-}
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
 
 .text-input {
     width: 100%;
@@ -713,11 +909,6 @@ body {
     -webkit-user-select: text;
 }
 
-.text-input:focus {
-    outline: none;
-    border-color: #38bdf8;
-}
-
 .summary-stats-box {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -728,22 +919,9 @@ body {
     padding: 10px;
 }
 
-.stat-mini {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.stat-mini-label {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-
-.stat-mini-val {
-    font-size: 16px;
-    font-weight: 800;
-    color: #38bdf8;
-}
+.stat-mini { display: flex; flex-direction: column; gap: 3px; }
+.stat-mini-label { font-size: 11px; color: var(--text-muted); }
+.stat-mini-val { font-size: 16px; font-weight: 800; color: #38bdf8; }
 
 .btn-primary-full {
     width: 100%;
@@ -757,34 +935,10 @@ body {
     cursor: pointer;
 }
 
-.btn-primary-full:active {
-    transform: scale(0.98);
-}
-
-.helper-note {
-    margin: 0;
-    font-size: 11px;
-    color: var(--text-muted);
-    line-height: 1.4;
-}
-
-.card-divider {
-    border: none;
-    border-top: 1px solid #1e3354;
-    margin: 4px 0;
-}
-
-.danger-zone {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.danger-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #fda4af;
-}
+.helper-note { margin: 0; font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.card-divider { border: none; border-top: 1px solid #1e3354; margin: 4px 0; }
+.danger-zone { display: flex; flex-direction: column; gap: 6px; }
+.danger-title { font-size: 12px; font-weight: 700; color: #fda4af; }
 
 .btn-danger-outline {
     width: 100%;
@@ -798,10 +952,7 @@ body {
     cursor: pointer;
 }
 
-.roster-team-tabs {
-    display: flex;
-    gap: 6px;
-}
+.roster-team-tabs { display: flex; gap: 6px; }
 
 .roster-team-btn {
     padding: 6px 12px;
@@ -814,17 +965,8 @@ body {
     cursor: pointer;
 }
 
-.roster-team-btn.active.own {
-    background: #1d4ed8;
-    border-color: #93c5fd;
-    color: #ffffff;
-}
-
-.roster-team-btn.active.opp {
-    background: #be123c;
-    border-color: #fda4af;
-    color: #ffffff;
-}
+.roster-team-btn.active.own { background: #1d4ed8; border-color: #93c5fd; color: #ffffff; }
+.roster-team-btn.active.opp { background: #be123c; border-color: #fda4af; color: #ffffff; }
 
 .roster-table-wrap {
     flex: 1;
@@ -835,11 +977,7 @@ body {
     background: #08101e;
 }
 
-.roster-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
+.roster-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 
 .roster-table th {
     position: sticky;
@@ -854,16 +992,8 @@ body {
     z-index: 1;
 }
 
-.roster-table td {
-    padding: 6px 10px;
-    border-bottom: 1px solid #172744;
-}
-
-.roster-num-cell {
-    font-weight: 800;
-    color: #93c5fd;
-    text-align: center;
-}
+.roster-table td { padding: 6px 10px; border-bottom: 1px solid #172744; }
+.roster-num-cell { font-weight: 800; color: #93c5fd; text-align: center; }
 
 .roster-name-input,
 .roster-pos-select {
@@ -882,81 +1012,24 @@ body {
    学校用タブレット（縦画面・狭幅画面）レスポンシブ対応
 ========================================== */
 @media (max-width: 900px), (orientation: portrait) and (max-width: 1024px) {
-    body {
-        overflow: auto;
-        height: auto;
-        min-height: 100vh;
-    }
+    body { overflow: auto; height: auto; min-height: 100vh; }
+    .top-header { height: auto; flex-wrap: wrap; padding: 6px 10px; }
+    .mode-tabs { order: 3; width: 100%; justify-content: space-between; }
+    .tab-btn { flex: 1; padding: 6px 4px; font-size: 11px; }
 
-    .top-header {
-        height: auto;
-        flex-wrap: wrap;
-        padding: 6px 10px;
-    }
+    .workspace { display: flex; flex-direction: column; padding: 8px; gap: 8px; }
+    .panel { padding: 8px; }
+    .jersey-grid { grid-template-columns: repeat(6, 1fr); gap: 5px; }
+    .goal-grid { grid-template-rows: repeat(3, 34px); }
+    .court-canvas-wrap { height: 220px; max-height: 220px; flex: none; }
+    .result-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .result-btn { padding: 10px 4px; font-size: 12px; }
+    .play-log-list { max-height: 150px; }
 
-    .mode-tabs {
-        order: 3;
-        width: 100%;
-        justify-content: space-between;
-    }
+    .map-main-grid { display: flex; flex-direction: column; }
+    .map-canvas-wrap { height: 260px; flex: none; }
+    .tactics-canvas-wrap { height: 420px; }
 
-    .tab-btn {
-        flex: 1;
-        padding: 6px 4px;
-        font-size: 11px;
-    }
-
-    .workspace {
-        display: flex;
-        flex-direction: column;
-        padding: 8px;
-        gap: 8px;
-    }
-
-    .panel {
-        padding: 8px;
-    }
-
-    .jersey-grid {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 5px;
-    }
-
-    .jersey-btn {
-        min-height: 36px;
-    }
-
-    .goal-grid {
-        grid-template-rows: repeat(3, 34px);
-    }
-
-    .court-canvas-wrap {
-        height: 220px;
-        max-height: 220px;
-        flex: none;
-    }
-
-    .result-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-    }
-
-    .result-btn {
-        padding: 10px 4px;
-        font-size: 12px;
-    }
-
-    .play-log-list {
-        max-height: 150px;
-    }
-
-    .roster-grid-layout {
-        display: flex;
-        flex-direction: column;
-        height: auto;
-    }
-
-    .roster-table-wrap {
-        max-height: 420px;
-    }
+    .roster-grid-layout { display: flex; flex-direction: column; height: auto; }
+    .roster-table-wrap { max-height: 420px; }
 }
